@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RankScience ADMIN</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script src="js/api.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!requireAdmin()) return;
+            loadInitialData();
+            startNotificationPolling();
+        });
+
+        let adminState = {
+            currentPage: 'overview',
+            users: [],
+            products: [],
+            withdrawals: [],
+            commissionRates: [],
+            levelSettings: [],
+            stats: {},
+            modalOpen: false,
+            modalType: '',
+            selectedItem: null,
+            searchQuery: '',
+            selectedProducts: [],
+            vouchers: [],
+            clickedVouchers: [],
+            notificationPollTimer: null
+        };
+
+        async function loadInitialData() {
+            try {
+                await Promise.all([
+                    loadStats(), 
+                    loadUsers(), 
+                    loadProducts(), 
+                    loadWithdrawals(), 
+                    loadCommissionRates(), 
+                    loadLevelSettings(),
+                    loadVouchers(),
+                    loadClickedVouchers()
+                ]);
+                render();
+            } catch (error) {
+                console.error('Load data error:', error);
+                alert('Failed to load data: ' + error.message);
+            }
+        }
+
+        async function loadVouchers() {
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('http://localhost:5000/api/admin/vouchers', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!resp.ok) throw new Error('Failed to load vouchers');
+                adminState.vouchers = await resp.json();
+            } catch (error) {
+                console.error('Failed to load vouchers:', error);
+                adminState.vouchers = [];
+            }
+        }
+
+        async function loadClickedVouchers() {
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('http://localhost:5000/api/admin/voucher-clicks', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!resp.ok) {
+                    const errorText = await resp.text();
+                    console.error('Failed to load clicked vouchers:', resp.status, errorText);
+                    throw new Error('Failed to load clicked vouchers: ' + resp.status);
+                }
+                const newClicks = await resp.json();
+                console.log('Loaded clicked vouchers:', newClicks.length, 'items');
+                // Check if there are new clicks (for notification badge)
+                const oldCount = adminState.clickedVouchers.length;
+                adminState.clickedVouchers = newClicks;
+                // If new clicks were added, refresh the view if on notifications page
+                if (newClicks.length > oldCount && adminState.currentPage === 'notifications') {
+                    console.log('New clicks detected, refreshing notifications page');
+                    render();
+                } else if (newClicks.length !== oldCount) {
+                    // Update sidebar badge
+                    console.log('Click count changed, updating sidebar');
+                    render();
+                }
+                return newClicks;
+            } catch (error) {
+                console.error('Failed to load clicked vouchers:', error);
+                adminState.clickedVouchers = [];
+                throw error;
+            }
+        }
+
+        async function refreshNotifications() {
+            const ids = adminState.clickedVouchers
+                .map(click => Number(click.popup_id || click.id))
+                .filter(id => Number.isInteger(id) && id > 0);
+            try {
+                const token = localStorage.getItem('token');
+                if (ids.length) {
+                    const resp = await fetch('http://localhost:5000/api/admin/voucher-clicks/mark-read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({ ids })
+                    });
+                    if (!resp.ok) {
+                        const errorText = await resp.text();
+                        throw new Error(errorText || 'Failed to mark notifications as read');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to mark notifications as read:', error);
+                alert('Failed to refresh notifications: ' + (error.message || 'Unknown error'));
+            } finally {
+                try {
+                    await loadClickedVouchers();
+                } catch (error) {
+                    console.error('Failed to reload notifications after refresh:', error);
+                }
+                render();
+            }
+        }
+
+        function startNotificationPolling() {
+            // Poll for new voucher clicks every 10 seconds
+            if (adminState.notificationPollTimer) {
+                clearInterval(adminState.notificationPollTimer);
+            }
+            adminState.notificationPollTimer = setInterval(() => {
+                loadClickedVouchers();
+            }, 10000);
+        }
+
+        function stopNotificationPolling() {
+            if (adminState.notificationPollTimer) {
+                clearInterval(adminState.notificationPollTimer);
+                adminState.notificationPollTimer = null;
+            }
+        }
+
+        async function loadStats() { 
+            try {
+                adminState.stats = await adminAPI.getStats(); 
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+                adminState.stats = {};
+            }
+        }
+        
+        async function loadUsers() { 
+            try {
+                adminState.users = await adminAPI.getUsers(adminState.searchQuery); 
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                adminState.users = [];
+            }
+        }
+        
+        async function loadProducts() { 
+            try {
+                adminState.products = await adminAPI.getProducts(); 
+                adminState.selectedProducts = adminState.selectedProducts.filter(id => adminState.products.some(p => p.id === id));
+            } catch (error) {
+                console.error('Failed to load products:', error);
+                adminState.products = [];
+            }
+        }
+        
+        async function loadWithdrawals() { 
+            try {
+                adminState.withdrawals = await adminAPI.getWithdrawals(); 
+            } catch (error) {
+                console.error('Failed to load withdrawals:', error);
+                adminState.withdrawals = [];
+            }
+        }
+        
+        async function loadCommissionRates() { 
+            try {
+                adminState.commissionRates = await adminAPI.getCommissionRates(); 
+            } catch (error) {
+                console.error('Failed to load commission rates:', error);
+                adminState.commissionRates = [];
+            }
+        }
+        
+        async function loadLevelSettings() { 
+            try {
+                adminState.levelSettings = await adminAPI.getLevelSettings(); 
+            } catch (error) {
+                console.error('Failed to load level settings:', error);
+                adminState.levelSettings = [];
+            }
+        }
+
+        function logout() { 
+            authAPI.logout(); 
+        }
+        
+        function navigateTo(page) { 
+            adminState.currentPage = page; 
+            render(); 
+        }
+        
+        function openModal(type, item = null) { 
+            adminState.modalOpen = true; 
+            adminState.modalType = type; 
+            adminState.selectedItem = item; 
+            render(); 
+        }
+        
+        function closeModal() { 
+            adminState.modalOpen = false; 
+            adminState.modalType = ''; 
+            adminState.selectedItem = null; 
+            render(); 
+        }
+
+        async function searchUsers(query) { 
+            adminState.searchQuery = query; 
+            await loadUsers(); 
+            render(); 
+        }
+
+        function toggleProductSelection(productId, checked) {
+            const next = new Set(adminState.selectedProducts);
+            if (checked) {
+                next.add(productId);
+            } else {
+                next.delete(productId);
+            }
+            adminState.selectedProducts = Array.from(next);
+            render();
+        }
+
+        async function assignSelectedProducts() {
+            if (!adminState.selectedProducts.length) {
+                alert('Select at least one product');
+                return;
+            }
+            try {
+                await adminAPI.assignProducts(adminState.selectedProducts);
+                alert('Products assigned to all users');
+                adminState.selectedProducts = [];
+                await Promise.all([loadProducts(), loadUsers(), loadStats()]);
+                render();
+            } catch (error) {
+                alert('Assignment failed: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        async function handleManualAssignProduct(userId, selectId, bonusId, customPriceId) {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) {
+                alert('Product list not ready');
+                return;
+            }
+            const productId = parseInt(selectEl.value, 10);
+            if (!productId) {
+                alert('Choose a product');
+                return;
+            }
+            const bonusEl = document.getElementById(bonusId);
+            const manualBonus = bonusEl ? parseFloat(bonusEl.value || '0') : 0;
+            const customPriceEl = document.getElementById(customPriceId);
+            const customPrice = customPriceEl ? (customPriceEl.value.trim() === '' ? null : parseFloat(customPriceEl.value)) : null;
+            try {
+                await adminAPI.assignProductToUser(userId, productId, isNaN(manualBonus) ? 0 : manualBonus, customPrice);
+                alert('Product assigned to user');
+                if (bonusEl) bonusEl.value = '';
+                if (customPriceEl) customPriceEl.value = '';
+                await Promise.all([loadUsers(), loadStats()]);
+                const refreshed = adminState.users.find(u => u.id === userId);
+                if (refreshed) {
+                    adminState.selectedItem = refreshed;
+                }
+                render();
+            } catch (error) {
+                alert('Manual assignment failed: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        function updateManualAssignmentPrice(userId, selectId, customPriceId) {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+            
+            const selected = selectEl.options[selectEl.selectedIndex];
+            const user = adminState.users.find(u => u.id === userId);
+            if (!user || !selected) return;
+            
+            const levelPrice = selected.getAttribute('data-level' + (user.level || 1));
+            const priceDisplayEl = document.getElementById('manualPriceDisplay_' + userId);
+            if (priceDisplayEl) {
+                priceDisplayEl.textContent = `Current level price: $${levelPrice || '0.00'}`;
+            }
+        }
+
+        async function updateUserBalance() {
+            const newBalance = parseFloat(document.getElementById('newBalance').value);
+            if (isNaN(newBalance) || newBalance < 0) { 
+                alert('Invalid balance'); 
+                return; 
+            }
+            try { 
+                await adminAPI.updateUserBalance(adminState.selectedItem.id, newBalance); 
+                alert('Balance updated!'); 
+                await loadUsers(); 
+                closeModal(); 
+            } catch (error) { 
+                alert('Update failed: ' + error.message); 
+            }
+        }
+
+        async function updateUserCommission() {
+            const newCommission = parseFloat(document.getElementById('newCommission').value);
+            if (isNaN(newCommission) || newCommission < 0) { 
+                alert('Invalid commission'); 
+                return; 
+            }
+            try { 
+                await adminAPI.updateUserCommission(adminState.selectedItem.id, newCommission); 
+                alert('Commission updated!'); 
+                await loadUsers(); 
+                closeModal(); 
+            } catch (error) { 
+                alert('Update failed: ' + error.message); 
+            }
+        }
+
+        async function updateUserLevel() {
+            const newLevel = parseInt(document.getElementById('newLevel').value);
+            if (!newLevel || newLevel < 1 || newLevel > 5) { 
+                alert('Invalid level'); 
+                return; 
+            }
+            try { 
+                await adminAPI.updateUserLevel(adminState.selectedItem.id, newLevel); 
+                alert('Level updated!'); 
+                await loadUsers(); 
+                closeModal(); 
+            } catch (error) { 
+                alert('Update failed: ' + error.message); 
+            }
+        }
+
+        async function resetUserPassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            if (!newPassword || newPassword.length < 6) { 
+                alert('Password must be at least 6 characters'); 
+                return; 
+            }
+            try { 
+                await adminAPI.resetUserPassword(adminState.selectedItem.id, newPassword); 
+                alert('Password reset!'); 
+                closeModal(); 
+            } catch (error) { 
+                alert('Reset failed: ' + error.message); 
+            }
+        }
+
+        async function uploadProduct(e) {
+            e.preventDefault();
+            const form = document.getElementById('productForm');
+            const formData = new FormData(form);
+            try { 
+                await adminAPI.uploadProduct(formData); 
+                alert('Product uploaded!'); 
+                await loadProducts(); 
+                closeModal(); 
+            } catch (error) { 
+                alert('Upload failed: ' + error.message); 
+            }
+        }
+
+        async function updateProduct(e) {
+            e.preventDefault();
+            const form = document.getElementById('productForm');
+            const formData = new FormData(form);
+            try { 
+                await adminAPI.updateProduct(adminState.selectedItem.id, formData); 
+                alert('Product updated!'); 
+                await loadProducts(); 
+                closeModal(); 
+            } catch (error) { 
+                alert('Update failed: ' + error.message); 
+            }
+        }
+
+        async function toggleProductStatus(productId) {
+            try { 
+                await adminAPI.toggleProductStatus(productId); 
+                await loadProducts(); 
+                render(); 
+            } catch (error) { 
+                alert('Toggle failed: ' + error.message); 
+            }
+        }
+
+        async function approveWithdrawal(withdrawalId) {
+            if (!confirm('Approve this withdrawal?')) return;
+            try { 
+                await adminAPI.approveWithdrawal(withdrawalId); 
+                alert('Withdrawal approved!'); 
+                await loadWithdrawals(); 
+                await loadUsers(); 
+                await loadStats(); 
+                render(); 
+            } catch (error) { 
+                alert('Approval failed: ' + error.message); 
+            }
+        }
+
+        async function rejectWithdrawal(withdrawalId) {
+            const reason = prompt('Rejection reason (optional):');
+            try { 
+                await adminAPI.rejectWithdrawal(withdrawalId, reason || ''); 
+                alert('Withdrawal rejected!'); 
+                await loadWithdrawals(); 
+                render(); 
+            } catch (error) { 
+                alert('Rejection failed: ' + error.message); 
+            }
+        }
+
+        async function uploadVoucher(e) {
+            e.preventDefault();
+            const form = document.getElementById('voucherForm');
+            const formData = new FormData(form);
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('http://localhost:5000/api/admin/vouchers', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || 'Upload failed');
+                }
+                alert('Voucher uploaded!');
+                await loadVouchers();
+                closeModal();
+            } catch (error) {
+                alert('Upload failed: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        async function sendVoucherToUser(userId) {
+            const select = document.getElementById('voucherSelect_' + userId);
+            if (!select) {
+                alert('No voucher selected');
+                return;
+            }
+            const voucherId = parseInt(select.value, 10);
+            if (!voucherId) {
+                alert('Choose a voucher');
+                return;
+            }
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('http://localhost:5000/api/admin/popup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ userId, voucherId })
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || 'Failed to send voucher');
+                }
+                alert('Voucher popup sent to user!');
+            } catch (e) {
+                alert(e.message || 'Failed to send voucher');
+            }
+        }
+
+        async function updateCommissionRates() {
+            const rates = [];
+            for (let i = 1; i <= 5; i++) {
+                const rateInput = document.getElementById('commissionRate' + i);
+                const rate = parseFloat(rateInput.value) / 100;
+                if (isNaN(rate) || rate < 0 || rate > 1) { 
+                    alert('Invalid rate for Level ' + i); 
+                    return; 
+                }
+                rates.push({ level: i, rate });
+            }
+            try { 
+                await adminAPI.updateCommissionRates(rates); 
+                alert('Rates updated!'); 
+                await loadCommissionRates(); 
+                render(); 
+            } catch (error) { 
+                alert('Update failed: ' + error.message); 
+            }
+        }
+
+        async function updateLevelSettings() {
+            const settings = [];
+            for (let i = 1; i <= 5; i++) {
+                const dailyLimit = parseInt(document.getElementById('dailyLimit' + i).value);
+                const totalTasks = parseInt(document.getElementById('totalTasks' + i).value);
+                const minBalance = parseFloat(document.getElementById('minBalance' + i).value);
+                const maxWithdraw = parseFloat(document.getElementById('maxWithdraw' + i).value);
+                if (isNaN(dailyLimit) || isNaN(totalTasks) || isNaN(minBalance) || isNaN(maxWithdraw)) { 
+                    alert('Invalid settings for Level ' + i); 
+                    return; 
+                }
+                settings.push({ 
+                    level: i, 
+                    daily_task_limit: dailyLimit, 
+                    total_tasks_required: totalTasks, 
+                    min_withdrawal_balance: minBalance, 
+                    max_withdrawal_amount: maxWithdraw 
+                });
+            }
+            try { 
+                await adminAPI.updateLevelSettings(settings); 
+                alert('Settings updated!'); 
+                await loadLevelSettings(); 
+                render(); 
+            } catch (error) { 
+                alert('Update failed: ' + error.message); 
+            }
+        }
+
+        async function triggerManualAssignment() {
+            if (!confirm('Assign products to all users now?')) return;
+            try { 
+                await adminAPI.triggerAssignment(); 
+                alert('Products assigned!'); 
+            } catch (error) { 
+                alert('Assignment failed: ' + error.message); 
+            }
+        }
+
+        function renderSidebar() {
+            return `
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h1>Wunderkind</h1>
+                        <p>Admin Dashboard</p>
+                    </div>
+                    <ul class="sidebar-menu">
+                        <li>
+                            <button class="${adminState.currentPage === 'overview' ? 'active' : ''}" onclick="navigateTo('overview')">
+                                <span>📊</span> Overview
+                            </button>
+                        </li>
+                        <li>
+                            <button class="${adminState.currentPage === 'users' ? 'active' : ''}" onclick="navigateTo('users')">
+                                <span>👥</span> User Management
+                            </button>
+                        </li>
+                        <li>
+                            <button class="${adminState.currentPage === 'products' ? 'active' : ''}" onclick="navigateTo('products')">
+                                <span>📦</span> Product Management
+                            </button>
+                        </li>
+                        <li>
+                            <button class="${adminState.currentPage === 'withdrawals' ? 'active' : ''}" onclick="navigateTo('withdrawals')" style="position: relative;">
+                                <span>💰</span> Withdrawals
+                                ${(() => {
+                                    const pendingCount = (adminState.stats?.pendingWithdrawals && typeof adminState.stats.pendingWithdrawals === 'object') 
+                                        ? (adminState.stats.pendingWithdrawals.count || 0) 
+                                        : (adminState.stats?.pendingWithdrawals || 0);
+                                    return pendingCount > 0 ? `<span style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">${pendingCount}</span>` : '';
+                                })()}
+                            </button>
+                        </li>
+                        <li>
+                            <button class="${adminState.currentPage === 'commissionRates' ? 'active' : ''}" onclick="navigateTo('commissionRates')">
+                                <span>📈</span> Commission Rates
+                            </button>
+                        </li>
+                        <li>
+                            <button class="${adminState.currentPage === 'levelSettings' ? 'active' : ''}" onclick="navigateTo('levelSettings')">
+                                <span>⚙️</span> Level Settings
+                            </button>
+                        </li>
+                        <li>
+                            <button class="${adminState.currentPage === 'notifications' ? 'active' : ''}" onclick="navigateTo('notifications')" style="position: relative;">
+                                <span>🔔</span> Notifications
+                                ${adminState.clickedVouchers.length > 0 ? `<span style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">${adminState.clickedVouchers.length}</span>` : ''}
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="sidebar-footer">
+                        <button class="btn btn-secondary btn-small" onclick="openModal('changePassword')" style="margin-bottom: 8px; width: 100%;">🔐 Change Password</button>
+                        <button class="btn btn-danger btn-small" onclick="logout()">Logout</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOverview() {
+            const { totalUsers, activeUsers, totalBalance, totalProducts, pendingWithdrawals, totalCommission } = adminState.stats;
+            const pendingWithdrawCount = (pendingWithdrawals && typeof pendingWithdrawals === 'object') ? (pendingWithdrawals.count || 0) : (pendingWithdrawals || 0);
+            return `
+                <div class="content-header">
+                    <h2>Dashboard Overview</h2>
+                    <p>Platform statistics</p>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon purple">👥</div>
+                            <div>
+                                <div class="stat-value">${totalUsers || 0}</div>
+                                <div class="stat-label">Total Users</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon green">✓</div>
+                            <div>
+                                <div class="stat-value">${activeUsers || 0}</div>
+                                <div class="stat-label">Active Users</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon blue">💵</div>
+                            <div>
+                                <div class="stat-value">$${(totalBalance || 0).toFixed(2)}</div>
+                                <div class="stat-label">Total Balance</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon orange">📦</div>
+                            <div>
+                                <div class="stat-value">${totalProducts || 0}</div>
+                                <div class="stat-label">Total Products</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon purple">⏳</div>
+                            <div>
+                                <div class="stat-value">${pendingWithdrawCount}</div>
+                                <div class="stat-label">Pending Withdrawals</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-icon green">💰</div>
+                            <div>
+                                <div class="stat-value">$${(totalCommission || 0).toFixed(2)}</div>
+                                <div class="stat-label">Total Commission</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-secondary" onclick="triggerManualAssignment()">🔄 Trigger Manual Product Assignment</button>
+                </div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Recent Users</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Level</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${adminState.users.slice(0, 10).map(user => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                                            <div class="user-details">
+                                                <h4>${user.username}</h4>
+                                                <p>${user.email}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge level${user.level}">Level ${user.level}</span></td>
+                                    <td>$${user.wallet_balance.toFixed(2)}</td>
+                                    <td><span class="status-badge ${user.status}">${user.status}</span></td>
+                                    <td>
+                                        <button class="action-btn primary" onclick='openModal("viewUser", ${JSON.stringify(user)})'>Manage</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ${adminState.clickedVouchers.length > 0 ? `
+                <div class="table-container" style="margin-top: 24px;">
+                    <div class="table-header">
+                        <h3>🎉 Recent Voucher Clicks</h3>
+                        <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">Users who clicked on vouchers</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Voucher Title</th>
+                                <th>Clicked At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${adminState.clickedVouchers.slice(0, 10).map(click => {
+                                const clickedDate = new Date(click.clicked_at);
+                                const formattedDate = clickedDate.toLocaleString();
+                                return `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <div class="user-avatar">${(click.username || 'U')[0].toUpperCase()}</div>
+                                            <div class="user-details">
+                                                <h4>${click.username || 'Unknown'}</h4>
+                                                <p>${click.email || ''}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>${click.title || 'Voucher'}</td>
+                                    <td>${formattedDate}</td>
+                                    <td>
+                                        <button class="action-btn primary" onclick='openModal("viewUser", {id: ${click.user_id}, username: "${click.username || ''}", email: "${click.email || ''}"})'>View User</button>
+                                    </td>
+                                </tr>
+                            `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function renderUsers() {
+            return `
+                <div class="content-header">
+                    <h2>User Management</h2>
+                    <p>Manage all user accounts</p>
+                </div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>All Users (${adminState.users.length})</h3>
+                        <div class="search-box">
+                            <input type="text" placeholder="Search users..." oninput="searchUsers(this.value)" value="${adminState.searchQuery}">
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Level</th>
+                                <th>Balance</th>
+                                <th>Commission</th>
+                                <th>Tasks</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${adminState.users.map(user => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                                            <div class="user-details">
+                                                <h4>${user.username}</h4>
+                                                <p>${user.email}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge level${user.level}">Level ${user.level}</span></td>
+                                    <td>$${user.wallet_balance.toFixed(2)}</td>
+                                    <td>$${user.commission_earned.toFixed(2)}</td>
+                                    <td>${user.tasks_completed_at_level}</td>
+                                    <td><span class="status-badge ${user.status}">${user.status}</span></td>
+                                    <td>
+                                        <button class="action-btn primary" onclick='openModal("viewUser", ${JSON.stringify(user)})'>Manage</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderProducts() {
+            const API_URL = 'http://localhost:5000';
+            return `
+                <div class="content-header">
+                    <h2>Product Management</h2>
+                    <p>Manage platform products</p>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="openModal('uploadProduct')">📦 Upload New Product</button>
+                    <button class="btn btn-secondary" onclick="openModal('uploadVoucher')">🖼️ Upload Voucher</button>
+                    <button class="btn btn-secondary" onclick="assignSelectedProducts()" ${adminState.selectedProducts.length === 0 ? 'disabled' : ''}>🎯 Assign Selected to All Users</button>
+                    <span style="color: #6b7280; font-size: 14px;">Selected: ${adminState.selectedProducts.length}</span>
+                </div>
+                <div class="table-container">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                        ${adminState.products.map(product => `
+                            <div class="product-card">
+                                <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280;">
+                                        <input type="checkbox" ${adminState.selectedProducts.includes(product.id) ? 'checked' : ''} onchange="toggleProductSelection(${product.id}, this.checked)">
+                                        Select
+                                    </label>
+                                </div>
+                                <div style="text-align: center; margin-bottom: 16px;">
+                                    <img src="${API_URL}${product.image_path}" alt="${product.name}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 12px; margin-bottom: 12px;">
+                                    <h4 style="font-size: 18px; color: #1f2937; margin-bottom: 8px;">${product.name}</h4>
+                                    <span class="status-badge ${product.status}">${product.status}</span>
+                                </div>
+                                <div style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                                    <h5 style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">Level Pricing</h5>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                        ${[1,2,3,4,5].map(level => `
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 12px; color: #6b7280;">Level ${level}</div>
+                                                <div style="font-weight: 600; color: #7c3aed;">$${product['level' + level + '_price'].toFixed(2)}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="action-btn primary" style="flex: 1;" onclick='openModal("editProduct", ${JSON.stringify(product)})'>Edit</button>
+                                    <button class="action-btn" style="flex: 1;" onclick="toggleProductStatus(${product.id})">
+                                        ${product.status === 'active' ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderWithdrawals() {
+            return `
+                <div class="content-header">
+                    <h2>Withdrawal Requests</h2>
+                    <p>Review and process withdrawals</p>
+                </div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>All Withdrawals (${adminState.withdrawals.length})</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Amount</th>
+                                <th>Wallet Address</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${adminState.withdrawals.map(withdrawal => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <div class="user-avatar">${withdrawal.username[0].toUpperCase()}</div>
+                                            <div class="user-details">
+                                                <h4>${withdrawal.username}</h4>
+                                                <p>Balance: $${(withdrawal.wallet_balance?.toFixed(2) || '0.00')}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="font-weight: 600; color: #7c3aed;">$${withdrawal.amount.toFixed(2)}</td>
+                                    <td style="font-family: monospace; font-size: 12px;">${withdrawal.wallet_address}</td>
+                                    <td>${new Date(withdrawal.request_date).toLocaleString()}</td>
+                                    <td><span class="status-badge ${withdrawal.status}">${withdrawal.status}</span></td>
+                                    <td>
+                                        ${withdrawal.status === 'pending' ? `
+                                            <div class="action-buttons">
+                                                <button class="action-btn btn-secondary btn-small" onclick="approveWithdrawal(${withdrawal.id})">Approve</button>
+                                                <button class="action-btn btn-danger btn-small" onclick="rejectWithdrawal(${withdrawal.id})">Reject</button>
+                                            </div>
+                                        ` : '<span style="color: #6b7280;">Processed</span>'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderCommissionRates() {
+            return `
+                <div class="content-header">
+                    <h2>Commission Rates</h2>
+                    <p>Configure commission percentages</p>
+                </div>
+                <div class="table-container">
+                    <div class="commission-rates-grid">
+                        ${adminState.commissionRates.map(rate => `
+                            <div class="commission-rate-card">
+                                <div class="commission-level">Level ${rate.level}</div>
+                                <div style="margin-bottom: 12px;">
+                                    <input type="number" id="commissionRate${rate.level}" class="commission-input" value="${(rate.rate * 100).toFixed(1)}" min="0" max="100" step="0.1">
+                                </div>
+                                <div style="font-size: 14px; color: #6b7280;">Percentage (%)</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="text-align: center; margin-top: 24px;">
+                        <button class="btn btn-secondary" onclick="updateCommissionRates()">💰 Update Commission Rates</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLevelSettings() {
+            return `
+                <div class="content-header">
+                    <h2>Level Settings</h2>
+                    <p>Configure tasks and withdrawal limits</p>
+                </div>
+                <div class="table-container">
+                    ${adminState.levelSettings.map(setting => `
+                        <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h3 style="margin-bottom: 20px; color: #7c3aed;">Level ${setting.level} Settings</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="form-group">
+                                    <label>Daily Task Limit</label>
+                                    <input type="number" id="dailyLimit${setting.level}" value="${setting.daily_task_limit}" min="1" max="10">
+                                </div>
+                                <div class="form-group">
+                                    <label>Total Tasks Required</label>
+                                    <input type="number" id="totalTasks${setting.level}" value="${setting.total_tasks_required}" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Min Withdrawal Balance ($)</label>
+                                    <input type="number" id="minBalance${setting.level}" value="${setting.min_withdrawal_balance}" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label>Max Withdrawal Amount ($)</label>
+                                    <input type="number" id="maxWithdraw${setting.level}" value="${setting.max_withdrawal_amount}" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div style="text-align: center; margin-top: 24px;">
+                        <button class="btn btn-secondary" onclick="updateLevelSettings()">⚙️ Update Level Settings</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderModal() {
+            if (!adminState.modalOpen) return '';
+            const item = adminState.selectedItem;
+            const API_URL = 'http://localhost:5000';
+
+            if (adminState.modalType === 'viewUser') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Manage User: ${item.username}</h3>
+                                <p>Complete user management</p>
+                            </div>
+                            <div class="modal-body">
+                                <div style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                                    <h4 style="margin-bottom: 12px;">User Information</h4>
+                                    <div class="info-row">
+                                        <span class="info-label">User ID</span>
+                                        <span class="info-value">#${item.id}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Email</span>
+                                        <span class="info-value">${item.email}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Level</span>
+                                        <span class="info-value">Level ${item.level}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Tasks Completed</span>
+                                        <span class="info-value">${item.tasks_completed_at_level}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Status</span>
+                                        <span class="status-badge ${item.status}">${item.status}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Payment Name</span>
+                                        <span class="info-value">${item.payment_name || '-'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Crypto Wallet</span>
+                                        <span class="info-value">${item.crypto_wallet || '-'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Wallet Address</span>
+                                        <span class="info-value" style="font-family: monospace;">${item.wallet_address || '-'}</span>
+                                    </div>
+                                </div>
+                                <div style="background: #f1f5f9; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                                    <h4 style="margin-bottom: 12px;">Manual Product Assignment</h4>
+                                    ${adminState.products.length === 0 ? `
+                                        <p style="color: #6b7280; font-size: 14px;">No active products available.</p>
+                                    ` : `
+                                        <div class="form-group">
+                                            <label>Select Product</label>
+                                            <select id="manualProductSelect_${item.id}" onchange="updateManualAssignmentPrice(${item.id}, 'manualProductSelect_${item.id}', 'manualCustomPrice_${item.id}')">
+                                                ${adminState.products.map(p => `<option value="${p.id}" data-level1="${p.level1_price}" data-level2="${p.level2_price}" data-level3="${p.level3_price}" data-level4="${p.level4_price}" data-level5="${p.level5_price}">${p.name}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Custom Price (optional - leave empty to use level-based price)</label>
+                                            <input type="number" step="0.01" id="manualCustomPrice_${item.id}" placeholder="Leave empty for level price">
+                                            <small id="manualPriceDisplay_${item.id}" style="color: #6b7280; font-size: 12px; display: block; margin-top: 4px;">Current level price: $${(() => {
+                                                const firstProduct = adminState.products[0];
+                                                if (firstProduct && item.level) {
+                                                    return (firstProduct['level' + item.level + '_price'] || 0).toFixed(2);
+                                                }
+                                                return '0.00';
+                                            })()}</small>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Extra Bonus (optional)</label>
+                                            <input type="number" step="0.01" id="manualBonus_${item.id}" placeholder="0.00">
+                                        </div>
+                                        <button class="btn btn-secondary" onclick="handleManualAssignProduct(${item.id}, 'manualProductSelect_${item.id}', 'manualBonus_${item.id}', 'manualCustomPrice_${item.id}')">Assign Product</button>
+                                    `}
+                                </div>
+                                <div style="background: #fff7ed; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                                    <h4 style="margin-bottom: 12px;">Send Image Voucher</h4>
+                                    ${adminState.vouchers.length === 0 ? `
+                                        <p style="color:#9a3412; font-size: 14px;">No vouchers yet. Use Upload Voucher in Products to add one.</p>
+                                    ` : `
+                                        <div class="form-group">
+                                            <label>Select Voucher</label>
+                                            <select id="voucherSelect_${item.id}">
+                                                ${adminState.vouchers.map(v => `<option value="${v.id}">${v.name}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-secondary" onclick="sendVoucherToUser(${item.id})">Send Voucher Popup</button>
+                                    `}
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <button class="btn" onclick='openModal("editBalance", ${JSON.stringify(item)})'>💰 Edit Balance</button>
+                                    <button class="btn" onclick='openModal("editCommission", ${JSON.stringify(item)})'>💵 Edit Commission</button>
+                                    <button class="btn" onclick='openModal("editLevel", ${JSON.stringify(item)})'>⭐ Change Level</button>
+                                    <button class="btn btn-danger" onclick='openModal("resetPassword", ${JSON.stringify(item)})'>🔐 Reset Password</button>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn" style="background: #6b7280;" onclick="closeModal()">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'editBalance') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Edit Balance</h3>
+                                <p>Update wallet balance for ${item.username}</p>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert warning">⚠️ Current Balance: $${item.wallet_balance.toFixed(2)}</div>
+                                <div class="form-group">
+                                    <label>New Balance (USD)</label>
+                                    <input type="number" id="newBalance" step="0.01" value="${item.wallet_balance.toFixed(2)}">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                <button class="btn btn-secondary" onclick="updateUserBalance()">Update Balance</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'editCommission') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Edit Commission</h3>
+                                <p>Update commission for ${item.username}</p>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert warning">⚠️ Current Commission: $${item.commission_earned.toFixed(2)}</div>
+                                <div class="form-group">
+                                    <label>New Commission (USD)</label>
+                                    <input type="number" id="newCommission" step="0.01" value="${item.commission_earned.toFixed(2)}">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                <button class="btn btn-secondary" onclick="updateUserCommission()">Update Commission</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'editLevel') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Change User Level</h3>
+                                <p>Update level for ${item.username}</p>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert warning">⚠️ Current Level: Level ${item.level}</div>
+                                <div class="form-group">
+                                    <label>Select New Level</label>
+                                    <select id="newLevel">
+                                        ${[1,2,3,4,5].map(level => `
+                                            <option value="${level}" ${item.level === level ? 'selected' : ''}>Level ${level}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                <button class="btn btn-secondary" onclick="updateUserLevel()">Update Level</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'resetPassword') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Reset Password</h3>
+                                <p>Set new password for ${item.username}</p>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert error">⚠️ This will immediately change the user's password</div>
+                                <div class="form-group">
+                                    <label>New Password</label>
+                                    <input type="text" id="newPassword" minlength="6" placeholder="Enter new password">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                <button class="btn btn-danger" onclick="resetUserPassword()">Reset Password</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'uploadProduct') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Upload New Product</h3>
+                                <p>Add a new product with level-based pricing</p>
+                            </div>
+                            <form id="productForm" onsubmit="uploadProduct(event)">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Product Name</label>
+                                        <input type="text" name="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Product Image</label>
+                                        <input type="file" name="image" accept="image/*" required>
+                                    </div>
+                                    <div style="background: #f9fafb; padding: 16px; border-radius: 12px;">
+                                        <h4 style="margin-bottom: 12px;">Level-Based Pricing</h4>
+                                        ${[1,2,3,4,5].map(level => `
+                                            <div class="form-group">
+                                                <label>Level ${level} Price (USD)</label>
+                                                <input type="number" name="level${level}Price" step="0.01" required>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-secondary">Upload Product</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'uploadVoucher') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Upload Voucher</h3>
+                                <p>Add an image-based voucher card</p>
+                            </div>
+                            <form id="voucherForm" onsubmit="uploadVoucher(event)">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Name</label>
+                                        <input type="text" name="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Title (optional)</label>
+                                        <input type="text" name="title">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Description (optional)</label>
+                                        <textarea name="description" rows="3"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Voucher Image</label>
+                                        <input type="file" name="image" accept="image/*" required>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-secondary">Upload Voucher</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'editProduct') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>Edit Product</h3>
+                                <p>Update product information</p>
+                            </div>
+                            <form id="productForm" onsubmit="updateProduct(event)">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Product Name</label>
+                                        <input type="text" name="name" value="${item.name}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Product Image (leave empty to keep current)</label>
+                                        <input type="file" name="image" accept="image/*">
+                                        <div style="margin-top: 12px;">
+                                            <p style="font-size: 14px; color: #6b7280;">Current Image:</p>
+                                            <img src="${API_URL}${item.image_path}" alt="${item.name}" style="max-width: 150px; border-radius: 8px; margin-top: 8px;">
+                                        </div>
+                                    </div>
+                                    <div style="background: #f9fafb; padding: 16px; border-radius: 12px;">
+                                        <h4 style="margin-bottom: 12px;">Level-Based Pricing</h4>
+                                        ${[1,2,3,4,5].map(level => `
+                                            <div class="form-group">
+                                                <label>Level ${level} Price (USD)</label>
+                                                <input type="number" name="level${level}Price" step="0.01" value="${item['level' + level + '_price']}" required>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-secondary">Update Product</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (adminState.modalType === 'changePassword') {
+                return `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>🔐 Change Password</h3>
+                                <p>Update your admin password</p>
+                            </div>
+                            <form id="changePasswordForm" onsubmit="changePassword(event)">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Current Password</label>
+                                        <input type="password" id="currentPassword" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>New Password</label>
+                                        <input type="password" id="newPassword" required minlength="6" placeholder="Minimum 6 characters">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Confirm New Password</label>
+                                        <input type="password" id="confirmPassword" required minlength="6">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn" style="background: #6b7280;" onclick="closeModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-secondary">Change Password</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return '';
+        }
+
+        async function changePassword(e) {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match!');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters long!');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('http://localhost:5000/api/admin/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || 'Failed to change password');
+                }
+                
+                alert('Password changed successfully!');
+                closeModal();
+            } catch (error) {
+                alert('Failed to change password: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        function renderNotifications() {
+            const API_URL = 'http://localhost:5000';
+            return `
+                <div class="content-header">
+                    <h2>🔔 Voucher Click Notifications</h2>
+                    <p>See when users click on vouchers you've sent</p>
+                    <button class="btn btn-secondary" onclick="refreshNotifications()" style="margin-top: 12px;">🔄 Refresh</button>
+                </div>
+                ${adminState.clickedVouchers.length === 0 ? `
+                    <div style="text-align: center; padding: 60px 20px; background: #f9fafb; border-radius: 12px; margin-top: 24px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔔</div>
+                        <h3 style="color: #6b7280; margin-bottom: 8px;">No Notifications Yet</h3>
+                        <p style="color: #9ca3af;">When users click on vouchers you've sent, you'll see notifications here.</p>
+                    </div>
+                ` : `
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Voucher</th>
+                                    <th>Message</th>
+                                    <th>Clicked At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${adminState.clickedVouchers.map(click => {
+                                    const clickedDate = new Date(click.clicked_at);
+                                    const formattedDate = clickedDate.toLocaleString();
+                                    const timeAgo = getTimeAgo(clickedDate);
+                                    return `
+                                    <tr>
+                                        <td>
+                                            <div class="user-info">
+                                                <div class="user-avatar">${(click.username || 'U')[0].toUpperCase()}</div>
+                                                <div class="user-details">
+                                                    <h4>${click.username || 'Unknown'}</h4>
+                                                    <p>${click.email || ''}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                ${click.image_path ? `
+                                                    <img src="${API_URL}${click.image_path}" alt="Voucher" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;">
+                                                ` : ''}
+                                                <div>
+                                                    <strong>${click.title || 'Voucher'}</strong>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                                                ${click.message || '-'}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div style="font-weight: 500;">${formattedDate}</div>
+                                                <div style="font-size: 12px; color: #6b7280;">${timeAgo}</div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button class="action-btn primary" onclick='openModal("viewUser", {id: ${click.user_id}, username: "${click.username || ''}", email: "${click.email || ''}"})'>View User</button>
+                                        </td>
+                                    </tr>
+                                `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `}
+            `;
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+            if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            return 'Just now';
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            let pageContent = '';
+            switch (adminState.currentPage) {
+                case 'overview': pageContent = renderOverview(); break;
+                case 'users': pageContent = renderUsers(); break;
+                case 'products': pageContent = renderProducts(); break;
+                case 'withdrawals': pageContent = renderWithdrawals(); break;
+                case 'commissionRates': pageContent = renderCommissionRates(); break;
+                case 'levelSettings': pageContent = renderLevelSettings(); break;
+                case 'notifications': pageContent = renderNotifications(); break;
+                default: pageContent = renderOverview();
+            }
+            app.innerHTML = `
+                <div class="admin-layout">
+                    ${renderSidebar()}
+                    <div class="main-content">
+                        ${pageContent}
+                    </div>
+                </div>
+                ${renderModal()}
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RankScience</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #ebb625;
+            --primary-dark: #af811e;
+            --secondary: #e67e22;
+            --secondary-dark: #d35400;
+            --success: #27ae60;
+            --danger: #ef4444;
+            --text: #333;
+            --text-light: #666;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: #f0f0f0;
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* ===== APP VIEWS ===== */
+        .app-view {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .app-view.active {
+            display: block;
+        }
+
+        /* ===== HEADER ===== */
+        header {
+            background: var(--primary);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        /* Mobile-first hardening */
+        img, video { max-width: 100%; height: auto; }
+        html, body { overflow-x: hidden; }
+        .container { padding: 0 16px; }
+        @media (max-width: 1024px) {
+            .header-content { flex-wrap: wrap; gap: 10px; }
+        }
+        @media (max-width: 768px) {
+            .logo { font-size: 1.4rem; }
+            header { padding: 0.75rem 0; }
+            .hero { padding: 72px 0 56px; }
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+            .growth-icons { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        }
+        @media (max-width: 640px) {
+            .header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
+            .header-actions .contact-btn { padding: 8px 14px; font-size: 0.95rem; }
+            .contact-btn { padding: 10px 16px; font-size: 0.95rem; }
+            .container { padding: 0 12px; }
+            .growth-icons { grid-template-columns: 1fr; }
+            .services-grid { grid-template-columns: 1fr; }
+        }
+
+        .contact-btn {
+            background: var(--secondary);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .contact-btn:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+
+        .menu-icon {
+            cursor: pointer;
+            padding: 8px;
+            color: white;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .menu-icon:hover {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        /* ===== LANDING PAGE ===== */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 100px 0 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            color: white;
+            margin-bottom: 1.5rem;
+            font-weight: 300;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .growth-icons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 3rem 0;
+            padding: 2rem 0;
+        }
+
+        .growth-icon {
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 1rem;
+            border-radius: 15px;
+        }
+
+        .growth-icon:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .icon-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 3px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .growth-icon:hover .icon-circle {
+            transform: scale(1.1);
+        }
+
+        .icon-circle i {
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        .icon-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .about {
+            padding: 60px 0;
+            background: white;
+        }
+
+        .about h2 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .about-subtitle {
+            color: var(--secondary);
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .about-text {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .quote {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-left: 4px solid var(--secondary);
+            margin: 2rem 0;
+            font-style: italic;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .services {
+            padding: 60px 0;
+            background: #f8f9fa;
+        }
+
+        .services h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 3rem;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .service-card {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .service-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .service-card:nth-child(1) .service-icon { background: var(--secondary); }
+        .service-card:nth-child(2) .service-icon { background: var(--success); }
+        .service-card:nth-child(3) .service-icon { background: var(--primary); }
+
+        .service-card h3 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        /* Footer - Only show on landing page */
+        footer {
+            background: var(--primary);
+            color: white;
+            padding: 3rem 0 2rem;
+            text-align: center;
+            display: none;
+        }
+
+        .app-view.active footer {
+            display: block;
+        }
+
+        footer h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .credentials {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .credential {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* ===== LOGIN VIEW ===== */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(235, 182, 37, 0.82) 0%, rgba(175, 129, 30, 0.88) 100%),
+                        url('https://images.unsplash.com/photo-1582719478286-5fe5c92c9706?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat fixed;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-title h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .login-title p {
+            color: var(--text-light);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .password-input {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* ===== DASHBOARD VIEW ===== */
+        .dashboard-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding-bottom: 80px;
+        }
+
+        .profile-header {
+            padding: 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 60px;
+        }
+
+        .profile-avatar {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .profile-badge {
+            padding: 8px 16px;
+            background: var(--secondary);
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .content-box {
+            padding: 20px;
+        }
+
+        .white-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .wallet-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .wallet-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .wallet-info {
+            flex: 1;
+        }
+
+        .wallet-label {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+
+        .wallet-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .task-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .task-app {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .task-app-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .task-status {
+            background: var(--success);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .commission-info {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #0369a1;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .alert.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+
+        /* ===== BOTTOM NAVIGATION ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            color: var(--primary);
+        }
+
+        .nav-btn-center {
+            background: var(--secondary);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transform: translateY(-15px);
+            box-shadow: 0 5px 15px rgba(230, 126, 34, 0.3);
+        }
+
+        /* ===== SIDE MENU ===== */
+        .side-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+
+        .side-menu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 280px;
+            height: 100%;
+            background: white;
+            padding: 20px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .side-menu h3 {
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .side-menu button {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .side-menu button:hover {
+            background: #f9fafb;
+            border-color: var(--primary);
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 3000;
+            overflow: auto;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .modal-header h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .vip-level {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: #f9fafb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        /* ===== NOTIFICATION TOAST ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 300px;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast.info {
+            border-left-color: var(--primary);
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .toast-message {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: var(--text);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        .toast.hiding {
+            animation: slideOutRight 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .growth-icons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // API Helper Functions
+        const API_BASE_URL = 'http://localhost:5000/api';
+
+        // Get token from localStorage
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        // Set token to localStorage
+        function setToken(token) {
+            localStorage.setItem('token', token);
+        }
+
+        // Remove token from localStorage
+        function removeToken() {
+            localStorage.removeItem('token');
+        }
+
+        // Get user data from localStorage
+        function getUserData() {
+            const userData = localStorage.getItem('userData');
+            return userData ? JSON.parse(userData) : null;
+        }
+
+        // Set user data to localStorage
+        function setUserData(userData) {
+            localStorage.setItem('userData', JSON.stringify(userData));
+        }
+
+        // Remove user data from localStorage
+        function removeUserData() {
+            localStorage.removeItem('userData');
+        }
+
+        // Generic API request function
+        async function apiRequest(endpoint, options = {}) {
+            const token = getToken();
+            
+            const defaultHeaders = {
+                'Content-Type': 'application/json',
+            };
+
+            if (token) {
+                defaultHeaders['Authorization'] = `Bearer ${token}`;
+            }
+
+            // If there's a body and it's FormData, remove Content-Type header
+            if (options.body instanceof FormData) {
+                delete defaultHeaders['Content-Type'];
+            }
+
+            const config = {
+                ...options,
+                headers: {
+                    ...defaultHeaders,
+                    ...options.headers,
+                },
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+                const text = await response.text();
+                let data = null;
+                if (text) {
+                    try {
+                        data = JSON.parse(text);
+                    } catch (parseError) {
+                        data = { raw: text };
+                    }
+                }
+
+                if (!response.ok) {
+                    // If we have structured error data, include it
+                    if (data && data.error) {
+                        const error = new Error(data.error);
+                        // Attach additional error data for parsing
+                        if (data.shortfall !== undefined) error.shortfall = data.shortfall;
+                        if (data.required !== undefined) error.required = data.required;
+                        if (data.currentBalance !== undefined) error.currentBalance = data.currentBalance;
+                        throw error;
+                    }
+                    const message = (data && data.raw) ? data.raw : 'Request failed';
+                    throw new Error(message);
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // ==================== AUTH API ====================
+
+        const authAPI = {
+            async register(username, email, password) {
+                return await apiRequest('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, email, password }),
+                });
+            },
+
+            async login(username, password) {
+                const data = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password }),
+                });
+                
+                if (data.token) {
+                    setToken(data.token);
+                    setUserData(data.user);
+                }
+                
+                return data;
+            },
+
+            async getMe() {
+                return await apiRequest('/auth/me', {
+                    method: 'GET',
+                });
+            },
+
+            logout() {
+                removeToken();
+                removeUserData();
+                window.location.href = 'index.html';
+            }
+        };
+
+        // ==================== USER API ====================
+
+        const userAPI = {
+            async getDashboard() {
+                return await apiRequest('/user/dashboard', {
+                    method: 'GET',
+                });
+            },
+
+            async submitToday() {
+                return await apiRequest('/user/submit-today', {
+                    method: 'POST',
+                });
+            },
+
+            async submitProduct(productAssignmentId) {
+                return await apiRequest(`/user/submit-product/${productAssignmentId}`, {
+                    method: 'POST',
+                });
+            },
+
+            async getHistory() {
+                return await apiRequest('/user/history', {
+                    method: 'GET',
+                });
+            },
+
+            async getPublicProducts() {
+                return await apiRequest('/user/products-public', {
+                    method: 'GET',
+                });
+            },
+
+            async requestWithdrawal(amount, walletAddress) {
+                return await apiRequest('/user/withdraw-request', {
+                    method: 'POST',
+                    body: JSON.stringify({ amount, walletAddress }),
+                });
+            },
+
+            async getWithdrawals() {
+                return await apiRequest('/user/withdrawals', {
+                    method: 'GET',
+                    });
+            },
+
+            async updateProfile(paymentName, cryptoWallet, walletAddress) {
+                return await apiRequest('/user/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify({ paymentName, cryptoWallet, walletAddress }),
+                });
+            },
+
+            async changePassword(oldPassword, newPassword) {
+                return await apiRequest('/user/password', {
+                    method: 'PUT',
+                    body: JSON.stringify({ oldPassword, newPassword }),
+                });
+            },
+
+            async deposit(amount) {
+                return await apiRequest('/user/deposit', {
+                    method: 'POST',
+                    body: JSON.stringify({ amount }),
+                });
+            }
+        };
+
+        // Check if user is authenticated
+        function isAuthenticated() {
+            return !!getToken();
+        }
+
+        // Check if user is admin
+        function isAdmin() {
+            const userData = getUserData();
+            return userData?.isAdmin === true;
+        }
+
+        let state = {
+            currentView: 'landing',
+            isLoggedIn: false,
+            menuOpen: false,
+            showPassword: false,
+            showRegister: false,
+            userData: null,
+            dashboardData: null,
+            history: null,
+            publicProducts: null,
+            showDepositModal: false,
+            pendingSubmissionId: null,
+            requiredDeposit: null,
+            depositMode: 'single',
+            pendingBulkIds: null
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (isAuthenticated()) {
+                const userData = getUserData();
+                if (userData && userData.isAdmin) {
+                    window.location.href = 'admin.html';
+                    return;
+                }
+                state.isLoggedIn = true;
+                state.currentView = 'dashboard';
+                await loadDashboardData();
+                startUserPolling();
+            } else {
+                // If not logged in, only show landing or login
+                state.currentView = 'landing';
+                stopUserPolling();
+            }
+            render();
+        });
+
+        async function loadDashboardData() {
+            try {
+                state.dashboardData = await userAPI.getDashboard();
+                state.userData = state.dashboardData.user;
+            } catch (error) {
+                console.error('Load dashboard error:', error);
+                showToast('error', 'Load Failed', 'Failed to load dashboard data');
+            }
+        }
+
+        function navigateTo(view) {
+            // Protect routes - only allow access to home, dashboard, tasks if logged in
+            if (!state.isLoggedIn && (view === 'home' || view === 'dashboard' || view === 'tasks' || view === 'records' || view === 'profile' || view === 'withdraw' || view === 'password' || view === 'payment')) {
+                state.currentView = 'login';
+                showToast('warning', 'Login Required', 'Please login to access this page');
+            } else {
+                state.currentView = view;
+            }
+            state.menuOpen = false;
+            render();
+            
+            if ((view === 'dashboard' || view === 'tasks') && state.isLoggedIn) {
+                loadDashboardData();
+                // Ensure polling is active when navigating to dashboard/tasks to catch any pending vouchers
+                if (!popupPollTimer) {
+                    startUserPolling();
+                }
+                if (view === 'tasks') {
+                    userAPI.getPublicProducts().then(list => { state.publicProducts = list; render(); }).catch(() => {});
+                }
+            }
+        }
+
+        function toggleMenu() {
+            state.menuOpen = !state.menuOpen;
+            render();
+        }
+
+        function togglePassword() {
+            state.showPassword = !state.showPassword;
+            render();
+        }
+
+        function toggleRegister() {
+            state.showRegister = !state.showRegister;
+            render();
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            try {
+                await authAPI.register(username, email, password);
+                showToast('success', 'Registration Successful', 'Please login to continue');
+                state.showRegister = false;
+                render();
+            } catch (error) {
+                showToast('error', 'Registration Failed', error.message || 'Registration failed');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            try {
+                const data = await authAPI.login(username, password);
+                if (data.user.isAdmin) {
+                    window.location.href = 'admin.html';
+                } else {
+                    state.isLoggedIn = true;
+                    state.currentView = 'dashboard';
+                    await loadDashboardData();
+                    // Start polling immediately to fetch any pending vouchers/popups
+                    startUserPolling();
+                    render();
+                }
+            } catch (error) {
+                showToast('error', 'Login Failed', error.message || 'Login failed');
+            }
+        }
+
+        function logout() {
+            authAPI.logout();
+            state.isLoggedIn = false;
+            state.currentView = 'landing';
+            state.userData = null;
+            state.dashboardData = null;
+            render();
+        }
+
+        async function submitProduct(productAssignmentId) {
+            try {
+                const result = await userAPI.submitProduct(productAssignmentId);
+                const bonus = Number(result.bonus || 0);
+                const commission = Number(result.commission || 0);
+                const baseAmount = Number(result.baseAmount || 0);
+                let message = 'Product submitted! You earned $' + result.earned.toFixed(2);
+                message += ` (Base $${baseAmount.toFixed(2)}${bonus > 0 ? ' + Bonus $' + bonus.toFixed(2) : ''} + Commission $${commission.toFixed(2)})`;
+                showToast('success', 'Success!', message);
+                await loadDashboardData();
+                state.history = null;
+                navigateTo('tasks');
+            } catch (error) {
+                // Check if error response contains insufficient balance info
+                if (error.message && error.message.includes('Insufficient balance')) {
+                    const shortfall = error.shortfall || (state.dashboardData?.user?.wallet_balance < 0 ? Math.abs(state.dashboardData.user.wallet_balance) : 0);
+                    showDepositModal(productAssignmentId, shortfall);
+                } else {
+                    showToast('error', 'Submission Failed', error.message || 'Submission failed');
+                }
+            }
+        }
+
+        function showDepositModal(productAssignmentId, shortfall, options = {}) {
+            const { mode = 'single', pendingIds = null } = options || {};
+            state.pendingSubmissionId = productAssignmentId;
+            state.requiredDeposit = shortfall || (state.dashboardData?.user?.wallet_balance < 0 ? Math.abs(state.dashboardData.user.wallet_balance) : 0);
+            state.showDepositModal = true;
+            state.depositMode = mode;
+            state.pendingBulkIds = Array.isArray(pendingIds) ? pendingIds : null;
+            render();
+        }
+
+        function closeDepositModal() {
+            state.showDepositModal = false;
+            state.pendingSubmissionId = null;
+            state.requiredDeposit = null;
+            state.depositMode = 'single';
+            state.pendingBulkIds = null;
+            render();
+        }
+
+        function showBulkDepositModal() {
+            const walletBalance = Number(state.dashboardData?.user?.wallet_balance ?? 0);
+            const shortfall = walletBalance < 0 ? Math.abs(walletBalance) : 0;
+            const pendingProducts = (state.dashboardData?.todayProducts || []).filter(p => (p.status || '').toString().trim().toLowerCase() !== 'completed');
+            const pendingIds = pendingProducts.map(p => p.id);
+            showDepositModal(null, shortfall, { mode: 'bulk', pendingIds });
+        }
+
+        // Note: Direct deposit functionality removed - users must contact customer care via Telegram
+        // This function is kept for potential admin use but not exposed to users
+
+        // Toast notification system
+        let toastIdCounter = 0;
+        function showToast(type, title, message) {
+            const container = document.getElementById('toast-container') || createToastContainer();
+            const toastId = 'toast-' + (toastIdCounter++);
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="removeToast('${toastId}')">&times;</button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                removeToast(toastId);
+            }, 5000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function removeToast(toastId) {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }
+        }
+
+        async function submitAllToday() {
+            try {
+                const user = state.dashboardData?.user;
+                const todayProducts = state.dashboardData?.todayProducts || [];
+                const pendingProducts = todayProducts.filter(p => (p.status || '').toString().trim().toLowerCase() !== 'completed');
+
+                if (!user) {
+                    showToast('error', 'Submission Failed', 'User information missing. Please refresh and try again.');
+                    return;
+                }
+
+                if (pendingProducts.length === 0) {
+                    showToast('info', 'No Pending Tasks', 'All tasks for today are already completed.');
+                    return;
+                }
+
+                const walletBalance = Number(user.wallet_balance ?? 0);
+                if (walletBalance < 0) {
+                    const shortfall = Math.abs(walletBalance);
+                    showToast('warning', 'Deposit Required', 'Your balance is negative. Please deposit via customer care before submitting all tasks.');
+                    const pendingIds = pendingProducts.map(p => p.id);
+                    showDepositModal(null, shortfall, { mode: 'bulk', pendingIds });
+                    return;
+                }
+
+                const result = await userAPI.submitToday();
+                const base = Number(result.totalPrice || 0);
+                const bonus = Number(result.totalManualBonus || 0);
+                const commission = Number(result.totalCommission || 0);
+                const credit = Number(result.totalCredit || 0);
+                showToast('success', 'Tasks Submitted', `Submitted ${result.tasksSubmitted} tasks. Refunded: $${base.toFixed(2)} + Bonus: $${bonus.toFixed(2)} + Commission: $${commission.toFixed(2)} = $${credit.toFixed(2)}`);
+                await loadDashboardData();
+                state.history = null;
+                navigateTo('tasks');
+            } catch (error) {
+                showToast('error', 'Submission Failed', error.message || 'Submission failed');
+            }
+        }
+
+        async function handleWithdrawal(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const walletAddress = document.getElementById('withdrawWallet').value;
+            if (!amount || !walletAddress) {
+                showToast('error', 'Validation Error', 'Please fill all fields');
+                return;
+            }
+            try {
+                await userAPI.requestWithdrawal(amount, walletAddress);
+                showToast('success', 'Withdrawal Requested', 'Your withdrawal request has been submitted successfully!');
+                document.getElementById('withdrawAmount').value = '';
+                document.getElementById('withdrawWallet').value = '';
+                await loadDashboardData();
+            } catch (error) {
+                showToast('error', 'Withdrawal Failed', error.message || 'Withdrawal request failed');
+            }
+        }
+
+        async function handleProfileUpdate(e) {
+            e.preventDefault();
+            const paymentName = document.getElementById('paymentName').value;
+            const cryptoWallet = document.getElementById('cryptoWallet').value;
+            const walletAddress = document.getElementById('walletAddress').value;
+            try {
+                await userAPI.updateProfile(paymentName, cryptoWallet, walletAddress);
+                showToast('success', 'Profile Updated', 'Your profile has been updated successfully!');
+                await loadDashboardData();
+            } catch (error) {
+                showToast('error', 'Update Failed', error.message || 'Update failed');
+            }
+        }
+
+        async function handlePasswordChange(e) {
+            e.preventDefault();
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            if (newPassword !== confirmPassword) {
+                showToast('error', 'Validation Error', 'Passwords do not match');
+                return;
+            }
+            try {
+                await userAPI.changePassword(oldPassword, newPassword);
+                showToast('success', 'Password Changed', 'Your password has been changed successfully!');
+                document.getElementById('oldPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            } catch (error) {
+                showToast('error', 'Password Change Failed', error.message || 'Password change failed');
+            }
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    // If it's the deposit modal, close it properly
+                    if (modal.id === 'depositModal') {
+                        closeDepositModal();
+                    }
+                }
+            });
+        };
+
+        function renderLanding() {
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">CONTACT US</a>
+                                    <button class="contact-btn" onclick="navigateTo('login')" style="margin-left: 10px;">LOGIN</button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section class="hero">
+                        <div class="container">
+                            <h1>Do you want to improve your income?</h1>
+                            <p>RankScience connects you with opportunities to earn through product reviews and task completion. Join our growing community today.</p>
+                            <button class="contact-btn" onclick="navigateTo('login')" style="font-size: 1.1rem; padding: 15px 30px; border: none; cursor: pointer;">GET STARTED</button>
+                        </div>
+                    </section>
+
+                    <section class="about">
+                        <div class="container">
+                            <div class="growth-icons">
+                                <div class="growth-icon" onclick="openModal('vipModal')">
+                                    <div class="icon-circle"><i class="fas fa-crown"></i></div>
+                                    <span class="icon-label">Levels</span>
+                                </div>
+                                <div class="growth-icon">
+                                    <div class="icon-circle"><i class="fas fa-calendar-alt"></i></div>
+                                    <span class="icon-label">Events</span>
+                                </div>
+                                <div class="growth-icon">
+                                    <div class="icon-circle"><i class="fas fa-sync-alt"></i></div>
+                                    <span class="icon-label">Withdraw</span>
+                                </div>
+                                <div class="growth-icon">
+                                    <div class="icon-circle"><i class="fas fa-money-bill-wave"></i></div>
+                                    <span class="icon-label">Earnings</span>
+                                </div>
+                                <div class="growth-icon" onclick="openModal('termsModal')">
+                                    <div class="icon-circle"><i class="fas fa-file-contract"></i></div>
+                                    <span class="icon-label">T & C</span>
+                                </div>
+                                <div class="growth-icon">
+                                    <div class="icon-circle"><i class="fas fa-certificate"></i></div>
+                                    <span class="icon-label">Certificate</span>
+                                </div>
+                                <div class="growth-icon" onclick="openModal('faqsModal')">
+                                    <div class="icon-circle"><i class="fas fa-question-circle"></i></div>
+                                    <span class="icon-label">FAQs</span>
+                                </div>
+                                <div class="growth-icon" onclick="openModal('aboutModal')">
+                                    <div class="icon-circle"><i class="fas fa-info-circle"></i></div>
+                                    <span class="icon-label">About</span>
+                                </div>
+                            </div>
+
+                            <h2>RankScience</h2>
+                            <p class="about-subtitle">Your Growth Partner</p>
+                            <p class="about-text">We connect talented individuals with opportunities to earn money through simple tasks and product reviews. Join thousands of users who are already earning.</p>
+                            
+                            <div class="quote">
+                                "Our mission is to provide everyone with the opportunity to earn extra income through meaningful engagement with products and services."
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="services">
+                        <div class="container">
+                            <h2>How It Works</h2>
+                            <div class="services-grid">
+                                <div class="service-card">
+                                    <div class="service-icon"><i class="fas fa-user-plus"></i></div>
+                                    <h3>Sign Up</h3>
+                                    <p>Create your free account in minutes and start your earning journey with us today.</p>
+                                </div>
+                                <div class="service-card">
+                                    <div class="service-icon"><i class="fas fa-tasks"></i></div>
+                                    <h3>Complete Tasks</h3>
+                                    <p>Choose from various tasks and complete them at your own pace to earn commissions.</p>
+                                </div>
+                                <div class="service-card">
+                                    <div class="service-icon"><i class="fas fa-wallet"></i></div>
+                                    <h3>Get Paid</h3>
+                                    <p>Withdraw your earnings directly to your wallet once you reach the minimum threshold.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer>
+                        <div class="container">
+                            <h3>RankScience</h3>
+                            <p>Your Growth Partner</p>
+                            <div class="credentials">
+                                <div class="credential">WK</div>
+                                <div class="credential">2024</div>
+                                <div class="credential">PRO</div>
+                            </div>
+                            <p style="margin-top: 2rem; color: rgba(255,255,255,0.7);">&copy; 2024 RankScience. All rights reserved.</p>
+                        </div>
+                    </footer>
+
+                    ${renderModals()}
+                </div>
+            `;
+        }
+
+        function renderLogin() {
+            if (state.showRegister) {
+                return `
+                    <div class="app-view active">
+                        <div class="login-container">
+                            <div class="login-box">
+                                <div class="login-title">
+                                    <h1>RankScience</h1>
+                                    <p>Create Account</p>
+                                </div>
+                                <form onsubmit="handleRegister(event)">
+                                    <div class="form-group">
+                                        <label>Username</label>
+                                        <input type="text" id="regUsername" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Email</label>
+                                        <input type="email" id="regEmail" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Password</label>
+                                        <input type="password" id="regPassword" required minlength="6">
+                                    </div>
+                                    <button type="submit" class="btn">Register</button>
+                                </form>
+                                <div style="margin-top: 16px; text-align: center;">
+                                    <a href="#" onclick="toggleRegister(); return false;" style="color: #2563eb; font-size: 14px;">Already have an account? Login</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="app-view active">
+                    <div class="login-container">
+                        <div class="login-box">
+                            <div class="login-title">
+                                <h1>RankScience</h1>
+                                <p>Welcome Back</p>
+                            </div>
+                            <form onsubmit="handleLogin(event)">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" id="username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <div class="password-input">
+                                        <input type="${state.showPassword ? 'text' : 'password'}" id="password" required>
+                                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                                            ${state.showPassword ? '👁️' : '👁️‍🗨️'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn">Login</button>
+                            </form>
+                            <div style="margin-top: 16px; text-align: center;">
+                                <a href="#" onclick="toggleRegister(); return false;" style="color: #2563eb; font-size: 14px; font-weight: 600;">Don't have an account? Sign Up</a>
+                            </div>
+                            <div style="margin-top: 16px; text-align: center;">
+                                <a href="#" onclick="navigateTo('landing'); return false;" style="color: #6b7280; font-size: 14px;">Back to Home</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDashboard() {
+            if (!state.dashboardData) return '<div class="loading">Loading...</div>';
+            const { user, levelSettings, commissionRate, canUpgrade } = state.dashboardData;
+            
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="toggleMenu()">
+                                        <i class="fas fa-bars"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="content-box">
+                            <div class="white-box" style="margin-bottom: 12px;">
+                                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 6px;">Featured Products</h3>
+                                <p style="color: #6b7280; font-size: 14px;">Uploaded by admin. Rotating preview.</p>
+                            </div>
+                            <div id="publicGalleryCard">
+                                ${(() => {
+                                    if (!state.publicProducts || state.publicProducts.length === 0) {
+                                        return `<div class=\"white-box\">Loading products...</div>`;
+                                    }
+                                    const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
+                                    const p = state.publicProducts[0];
+                                    const imagePath = p.image_path ? `${baseUploadUrl}/${p.image_path.replace(/^\/+/, '')}` : '';
+                                    const imageTemplate = imagePath ? `<img src=\"${imagePath}\" alt=\"${p.name}\" style=\"width:100%; height:180px; object-fit:cover; border-radius:12px;\">` : '📦';
+                                    return `
+                                        <div class=\"task-card\" style=\"margin-bottom: 16px;\">
+                                            <div class=\"task-app\" style=\"align-items: center;\">
+                                                <div class=\"task-app-icon\" style=\"width: 120px; height: 120px;\">${imageTemplate}</div>
+                                                <div style=\"flex:1;\">
+                                                    <h3 style=\"font-weight: bold; font-size: 18px; margin-bottom: 6px;\">${p.name}</h3>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                })()}
+                            </div>
+                        </div>
+
+                        <div class="profile-header">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="profile-avatar">👤</div>
+                                <div>
+                                    <div style="font-size: 18px; font-weight: 600;">Hi, ${user.username} 👋</div>
+                                    <div style="font-size: 14px; opacity: 0.9;">Welcome back!</div>
+                                </div>
+                            </div>
+                            <div class="profile-badge">Level ${user.level}</div>
+                        </div>
+
+                        ${canUpgrade ? `
+                            <div style="padding: 0 20px;">
+                                <div class="alert warning">
+                                    🎉 Congratulations! You've completed all tasks for Level ${user.level}. Contact customer support to upgrade to the next level!
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="content-box">
+                            <div class="wallet-card">
+                                <div class="wallet-icon">💳</div>
+                                <div class="wallet-info">
+                                    <div class="wallet-label">Wallet Balance</div>
+                                    <div style="font-size: 12px; color: #9ca3af;">Available to withdraw</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="wallet-amount">$${user.wallet_balance.toFixed(2)}</div>
+                                    <div style="font-size: 14px; color: #6b7280;">USD</div>
+                                </div>
+                            </div>
+
+                            <div class="wallet-card">
+                                <div class="wallet-icon" style="background: #27ae60;">₹</div>
+                                <div class="wallet-info">
+                                    <div class="wallet-label">Commission Earned</div>
+                                    <div style="font-size: 12px; color: #9ca3af;">Rate: ${(commissionRate * 100).toFixed(1)}% (Level ${user.level})</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="wallet-amount">$${user.commission_earned.toFixed(2)}</div>
+                                    <div style="font-size: 14px; color: #6b7280;">USD</div>
+                                </div>
+                            </div>
+
+                            <div class="white-box">
+                                <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">Quick Actions</h3>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                                    <button onclick="navigateTo('tasks')" style="padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">
+                                        <div style="font-size: 2rem; margin-bottom: 8px;">📋</div>
+                                        <div>My Tasks</div>
+                                    </button>
+                                    <button onclick="navigateTo('withdraw')" style="padding: 20px; background: linear-gradient(135deg, #f093fb, #f5576c); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">
+                                        <div style="font-size: 2rem; margin-bottom: 8px;">💰</div>
+                                        <div>Withdraw</div>
+                                    </button>
+                                    <button onclick="navigateTo('profile')" style="padding: 20px; background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">
+                                        <div style="font-size: 2rem; margin-bottom: 8px;">👤</div>
+                                        <div>My Profile</div>
+                                    </button>
+                                    <button onclick="navigateTo('records')" style="padding: 20px; background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">
+                                        <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
+                                        <div>History</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="white-box">
+                                <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">Your Level Progress</h3>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <div>
+                                        <div style="font-size: 14px; color: #6b7280;">Current Level</div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #2563eb;">Level ${user.level}</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 14px; color: #6b7280;">Commission Rate</div>
+                                        <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${(commissionRate * 100).toFixed(1)}%</div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 15px;">
+                                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">
+                                        Tasks Completed: ${user.tasks_completed_at_level}/${levelSettings.total_tasks_required}
+                                    </div>
+                                    <div style="background: #e5e7eb; height: 10px; border-radius: 5px; overflow: hidden;">
+                                        <div style="height: 100%; background: linear-gradient(90deg, #2563eb, #7c3aed); width: ${(user.tasks_completed_at_level / levelSettings.total_tasks_required * 100).toFixed(1)}%; transition: width 0.5s ease;"></div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 14px; color: #6b7280;">
+                                        ◉ Daily Tasks Limit: ${levelSettings.daily_task_limit} tasks/day<br>
+                                        ◉ Min Withdrawal: $${levelSettings.min_withdrawal_balance}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="white-box">
+                                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Important Notice</h3>
+                                <p style="color: #6b7280; line-height: 1.6;">
+                                    Complete your daily tasks to earn rewards and increase your VIP level. Higher VIP levels unlock better commission rates and exclusive benefits.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${renderBottomNav('dashboard')}
+                    ${state.menuOpen ? renderSideMenu() : ''}
+                </div>
+            `;
+        }
+
+        function renderTasks() {
+            if (!state.dashboardData) return '<div class="loading">Loading...</div>';
+            const { user, levelSettings, commissionRate, todayProducts, completedToday } = state.dashboardData;
+            const anyPending = todayProducts.some(p => (p.status || '').toString().trim().toLowerCase() !== 'completed');
+            const walletBalance = Number(user.wallet_balance || 0);
+            const balanceShortfall = walletBalance < 0 ? Math.abs(walletBalance) : 0;
+            
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="navigateTo('dashboard')">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="profile-header">
+                            <div>
+                                <div style="font-size: 20px; font-weight: bold;">Today's Tasks</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Complete tasks to earn commissions</div>
+                            </div>
+                            <div class="profile-badge">${completedToday}/${levelSettings.daily_task_limit}</div>
+                        </div>
+
+                        <div class="content-box">
+                            ${user.wallet_balance < 0 ? `
+                                <div class="alert warning" style="margin-bottom: 16px;">
+                                    Your balance is negative ($${user.wallet_balance.toFixed(2)}). Please contact customer care via Telegram to deposit funds. Once you submit, the deducted amount returns plus commission.
+                                </div>
+                            ` : ''}
+                            ${todayProducts.length === 0 ? `
+                                <div class="white-box" style="text-align: center; padding: 40px;">
+                                    <div style="font-size: 3rem; margin-bottom: 15px;">📋</div>
+                                    <div style="color: #6b7280; font-size: 16px;">No products assigned yet. Products are assigned daily at midnight.</div>
+                                </div>
+                            ` : `
+                                <div class="white-box" style="margin-bottom: 16px;">
+                                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Swipe Through Today's Products</h3>
+                                    <p style="color: #6b7280; font-size: 14px;">These are the products uploaded by the admin for you today. Swipe sideways to review each one and submit to earn.</p>
+                                </div>
+                                ${anyPending ? (walletBalance >= 0
+                                    ? `<button class="btn" style="width:100%; margin: 8px 0 16px 0;" onclick="submitAllToday()">Submit All Today's Tasks</button>`
+                                    : `<button class="btn" style="width:100%; margin: 8px 0 8px 0; background: #9ca3af; cursor: not-allowed; opacity: 0.6;" disabled>Submit All (Deposit Required)</button>
+                                       <button class="btn" style="width:100%; margin: 0 0 16px 0; background: #f59e0b;" onclick="showBulkDepositModal()">Deposit to Unlock Submissions</button>`) : ''}
+                                <div class="task-carousel">
+                                    ${(() => {
+                                        const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
+                                        return todayProducts.map(product => {
+                                            // Use custom_price if set, otherwise use level-based price
+                                            const price = product.custom_price !== null && product.custom_price !== undefined
+                                                ? Number(product.custom_price || 0)
+                                                : Number(product['level' + user.level + '_price'] || 0);
+                                            const manualBonus = Number(product.manual_bonus || 0);
+                                            const baseAmount = Number((price + manualBonus).toFixed(2));
+                                            const commission = Number((price * commissionRate).toFixed(2));
+                                            const total = Number((baseAmount + commission).toFixed(2));
+                                            const status = (product.status || '').toString().trim().toLowerCase();
+                                            const badgeClass = status === 'completed' ? 'completed' : 'pending';
+                                            const statusLabel = status === 'completed' ? 'Completed' : 'Pending';
+                                            const isManual = Number(product.is_manual || 0) === 1;
+                                            const imagePath = product.image_path ? `${baseUploadUrl}/${product.image_path.replace(/^\/+/, '')}` : '';
+                                            const imageTemplate = imagePath ? `<img src="${imagePath}" alt="${product.name}">` : '📦';
+                                            
+                                            // Check if user has enough balance to submit
+                                            const canSubmit = walletBalance >= 0;
+                                            
+                                            const actionContent = status === 'completed'
+                                                ? '<div class="task-status completed">✅ Completed</div>'
+                                                : canSubmit
+                                                    ? `<button class="btn" style="width: 100%;" onclick="submitProduct(${product.id})">Submit Task</button>`
+                                                    : `<button class="btn" style="width: 100%; background: #ef4444; cursor: not-allowed; opacity: 0.7;" disabled>Insufficient Balance</button>
+                                                       <button class="btn" style="width: 100%; margin-top: 8px; background: #f59e0b;" onclick="showDepositModal(${product.id}, ${balanceShortfall}, { mode: 'single', pendingIds: [${product.id}] })">Deposit to Continue</button>`;
+                                            return `
+                                                <div class="task-card carousel-card">
+                                                    <div class="task-app">
+                                                        <div class="task-app-icon">
+                                                            ${imageTemplate}
+                                                        </div>
+                                                        <div style="flex: 1;">
+                                                            <h3 style="font-weight: bold; font-size: 18px; margin-bottom: 6px;">${product.name}</h3>
+                                                            <p style="color: #4b5563; font-size: 16px; font-weight: bold;">Base Price: $${price.toFixed(2)}</p>
+                                                            ${manualBonus > 0 ? `<div style="color: #16a34a; font-size: 14px;">Bonus: +$${manualBonus.toFixed(2)}</div>` : ''}
+                                                            <div style="margin-top: 4px; color: #fbbf24; font-size: 14px;">Commission ready: $${commission.toFixed(2)}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="commission-info" style="margin: 16px 0;">
+                                                        <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;">
+                                                            <div>
+                                                                <div style="font-size: 12px; color: #0369a1; text-transform: uppercase; letter-spacing: 0.05em;">You'll Receive</div>
+                                                                <div style="font-size: 20px; font-weight: bold; color: #0369a1;">$${total.toFixed(2)}</div>
+                                                            </div>
+                                                            <div style="text-align: right;">
+                                                                <div style="font-size: 12px; color: #0369a1;">Commission</div>
+                                                                <div style="font-size: 18px; font-weight: bold; color: #0369a1;">$${commission.toFixed(2)}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                                                        <span class="task-status ${badgeClass}">${statusLabel}</span>
+                                                        ${actionContent}
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('');
+                                    })()}
+                                </div>
+                            `}
+                        </div>
+
+                        
+                    </div>
+
+                    ${renderBottomNav('tasks')}
+                </div>
+            `;
+        }
+
+        function renderRecords() {
+            if (!state.history) {
+                userAPI.getHistory().then(history => { state.history = history; render(); });
+                return '<div class="loading">Loading...</div>';
+            }
+            
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="navigateTo('dashboard')">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="profile-header">
+                            <div style="font-size: 20px; font-weight: bold;">My History</div>
+                        </div>
+
+                        <div class="content-box">
+                            ${state.history.length === 0 ? `
+                                <div class="white-box" style="text-align: center; padding: 40px;">
+                                    <div style="font-size: 3rem; margin-bottom: 15px;">📊</div>
+                                    <div style="color: #6b7280;">No submission history yet</div>
+                                </div>
+                            ` : state.history.map(item => {
+                                const status = (item.status || '').toString().trim().toLowerCase();
+                                const badgeClass = status === 'completed' ? 'completed' : 'pending';
+                                const statusLabel = status === 'completed' ? 'Completed' : 'Pending';
+                                const amountEarned = Number(item.amount_earned || 0);
+                                const commissionEarned = Number(item.commission_earned || 0);
+                                const manualBonus = Number(item.manual_bonus || 0);
+                                const isManual = Number(item.is_manual || 0) === 1;
+                                const amountDisplay = status === 'completed' && amountEarned > 0 ? `$${amountEarned.toFixed(2)}` : 'Pending submission';
+                                const commissionDisplay = status === 'completed' && commissionEarned > 0 ? `$${commissionEarned.toFixed(2)}` : '—';
+                                const assignedDate = item.assigned_date ? new Date(item.assigned_date).toLocaleDateString() : '—';
+                                const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
+                                const imagePath = item.image_path ? `${baseUploadUrl}/${item.image_path.replace(/^\/+/, '')}` : '';
+                                const imageTemplate = imagePath ? `<img src="${imagePath}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">` : '📦';
+                                return `
+                                    <div class="task-card history-card" style="display: flex; gap: 15px; align-items: center;">
+                                        <div style="width: 60px; height: 60px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                            ${imageTemplate}
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: bold; font-size: 16px;">${item.name}</div>
+                                            <div style="color: ${status === 'completed' ? '#27ae60' : '#6b7280'}; font-weight: bold; font-size: 18px; margin: 5px 0;">${amountDisplay}</div>
+                                            ${manualBonus > 0 ? `<div style="font-size: 12px; color: #16a34a;">Bonus: $${manualBonus.toFixed(2)}</div>` : ''}
+                                            <div style="font-size: 12px; color: #6b7280;">
+                                                ${assignedDate} • Commission: ${commissionDisplay}
+                                            </div>
+                                        </div>
+                                        <div class="task-status ${badgeClass}" style="flex-shrink: 0;">${statusLabel}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    ${renderBottomNav('records')}
+                </div>
+            `;
+        }
+
+        function renderProfile() {
+            if (!state.dashboardData) return '<div class="loading">Loading...</div>';
+            const { user, commissionRate } = state.dashboardData;
+            
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="navigateTo('dashboard')">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="profile-header">
+                            <div style="font-size: 20px; font-weight: bold;">My Profile</div>
+                        </div>
+
+                        <div class="content-box">
+                            <div class="white-box">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <div style="display: flex; gap: 16px; align-items: center;">
+                                        <div class="profile-avatar" style="width: 60px; height: 60px; font-size: 2rem;">👤</div>
+                                        <div>
+                                            <div style="font-weight: bold; font-size: 20px;">${user.username}</div>
+                                            <div style="font-size: 14px; color: #6b7280;">Level ${user.level}</div>
+                                            <div style="font-size: 14px; color: #6b7280;">Code: ${user.invitation_code}</div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 48px;">💎</div>
+                                </div>
+                                <div style="margin-top: 20px;">
+                                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Credit Score:</div>
+                                    <div style="background: #e5e7eb; height: 10px; border-radius: 5px; overflow: hidden;">
+                                        <div style="height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); width: ${user.credit_score}%;"></div>
+                                    </div>
+                                    <div style="text-align: right; font-size: 14px; margin-top: 5px;">${user.credit_score}%</div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                                    <div>
+                                        <div style="font-size: 14px; color: #6b7280;">Balance</div>
+                                        <div style="font-size: 22px; font-weight: bold;">$${user.wallet_balance.toFixed(2)} USD</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 14px; color: #6b7280;">Commission</div>
+                                        <div style="font-size: 22px; font-weight: bold;">${(commissionRate * 100).toFixed(1)}%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="white-box">
+                                <h3 style="font-weight: bold; font-size: 18px; margin-bottom: 16px;">Account Settings</h3>
+                                <div onclick="navigateTo('password')" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f9fafb; border-radius: 10px; cursor: pointer; margin-bottom: 10px;">
+                                    <div style="display: flex; gap: 12px; align-items: center;">
+                                        <span style="font-size: 24px;">🔐</span>
+                                        <span style="font-weight: 600;">Change Password</span>
+                                    </div>
+                                    <span style="color: #9ca3af;">→</span>
+                                </div>
+                                <div onclick="navigateTo('payment')" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f9fafb; border-radius: 10px; cursor: pointer;">
+                                    <div style="display: flex; gap: 12px; align-items: center;">
+                                        <span style="font-size: 24px;">💳</span>
+                                        <span style="font-weight: 600;">Payment Methods</span>
+                                    </div>
+                                    <span style="color: #9ca3af;">→</span>
+                                </div>
+                            </div>
+
+                            <button class="btn" style="background: #ef4444;" onclick="logout()">Logout</button>
+                        </div>
+                    </div>
+
+                    ${renderBottomNav('profile')}
+                </div>
+            `;
+        }
+
+        function renderWithdraw() {
+            if (!state.dashboardData) return '<div class="loading">Loading...</div>';
+            const { user, levelSettings } = state.dashboardData;
+            
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="navigateTo('dashboard')">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="profile-header">
+                            <div style="font-size: 20px; font-weight: bold;">Withdraw Funds</div>
+                        </div>
+
+                        <div class="content-box">
+                            <div class="white-box" style="margin-bottom: 20px;">
+                                <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Account Balance</div>
+                                <div style="font-size: 40px; font-weight: bold;">$${user.wallet_balance.toFixed(2)} <span style="font-size: 24px;">USD</span></div>
+                                <div style="font-size: 14px; color: #6b7280; margin-top: 8px;">
+                                    Min: $${levelSettings.min_withdrawal_balance} | Max: $${levelSettings.max_withdrawal_amount}
+                                </div>
+                            </div>
+
+                            ${user.wallet_balance < levelSettings.min_withdrawal_balance ? `
+                                <div class="alert warning">
+                                    ⚠️ Minimum balance of $${levelSettings.min_withdrawal_balance} required for withdrawal at Level ${user.level}
+                                </div>
+                            ` : ''}
+
+                            <div class="white-box">
+                                <form onsubmit="handleWithdrawal(event)">
+                                    <div class="form-group">
+                                        <label>Amount (USD)</label>
+                                        <input type="number" id="withdrawAmount" step="0.01" max="${Math.min(user.wallet_balance, levelSettings.max_withdrawal_amount)}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Wallet Address</label>
+                                        <input type="text" id="withdrawWallet" placeholder="Enter your crypto wallet address" required>
+                                    </div>
+                                    <button type="submit" class="btn" ${user.wallet_balance < levelSettings.min_withdrawal_balance ? 'disabled' : ''}>
+                                        Request Withdrawal
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div class="white-box">
+                                <h4 style="font-weight: bold; margin-bottom: 10px;">Important Information</h4>
+                                <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+                                    • Withdrawals are processed within 24 hours<br>
+                                    • Admin approval required<br>
+                                    • Contact support for urgent requests
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${renderBottomNav('dashboard')}
+                </div>
+            `;
+        }
+
+        function renderPassword() {
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">RankScience</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="navigateTo('profile')">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="profile-header">
+                            <div style="font-size: 20px; font-weight: bold;">Change Password</div>
+                        </div>
+
+                        <div class="content-box">
+                            <div class="white-box">
+                                <form onsubmit="handlePasswordChange(event)">
+                                    <div class="form-group">
+                                        <label>Old Password</label>
+                                        <input type="password" id="oldPassword" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>New Password</label>
+                                        <input type="password" id="newPassword" minlength="6" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Confirm Password</label>
+                                        <input type="password" id="confirmPassword" minlength="6" required>
+                                    </div>
+                                    <button type="submit" class="btn">Update Password</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${renderBottomNav('profile')}
+                </div>
+            `;
+        }
+
+        function renderPayment() {
+            if (!state.dashboardData) return '<div class="loading">Loading...</div>';
+            const { user } = state.dashboardData;
+            
+            return `
+                <div class="app-view active">
+                    <header>
+                        <div class="container">
+                            <div class="header-content">
+                                <a href="#" class="logo">WUNDERKIND</a>
+                                <div class="header-actions">
+                                    <a href="#contact" class="contact-btn">SUPPORT</a>
+                                    <div class="menu-icon" onclick="navigateTo('profile')">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-container">
+                        <div class="profile-header">
+                            <div style="font-size: 20px; font-weight: bold;">Payment Methods</div>
+                        </div>
+
+                        <div class="content-box">
+                            <div class="white-box">
+                                <form onsubmit="handleProfileUpdate(event)">
+                                    <div class="form-group">
+                                        <label>Name</label>
+                                        <input type="text" id="paymentName" value="${user.payment_name || ''}" placeholder="Your full name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Crypto Wallet Type</label>
+                                        <input type="text" id="cryptoWallet" value="${user.crypto_wallet || ''}" placeholder="e.g., USDT (TRC20), Bitcoin">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Wallet Address</label>
+                                        <input type="text" id="walletAddress" value="${user.wallet_address || ''}" placeholder="Your wallet address">
+                                    </div>
+                                    <button type="submit" class="btn">Update Payment Info</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${renderBottomNav('profile')}
+                </div>
+            `;
+        }
+
+        function renderBottomNav(activePage = 'dashboard') {
+            return `
+                <div class="bottom-nav">
+                    <button class="nav-btn" onclick="navigateTo('dashboard')" style="${activePage === 'dashboard' ? 'color: var(--primary);' : ''}">
+                        <span style="font-size: 24px;">🏠</span>
+                        <span style="font-size: 10px;">HOME</span>
+                    </button>
+                    <button class="nav-btn-center" onclick="navigateTo('tasks')">
+                        ${activePage === 'tasks' ? 'Tasks' : 'RankScience'}
+                    </button>
+                    <button class="nav-btn" onclick="navigateTo('records')" style="${activePage === 'records' ? 'color: var(--primary);' : ''}">
+                        <span style="font-size: 24px;">📋</span>
+                        <span style="font-size: 10px;">Records</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderSideMenu() {
+            return `
+                <div class="side-menu-overlay" onclick="toggleMenu()">
+                    <div class="side-menu" onclick="event.stopPropagation()">
+                        <h3>Menu</h3>
+                        <button onclick="navigateTo('dashboard')">🏠 Home</button>
+                        <button onclick="navigateTo('tasks')">📋 My Tasks</button>
+                        <button onclick="navigateTo('records')">📊 History</button>
+                        <button onclick="navigateTo('withdraw')">💰 Withdraw</button>
+                        <button onclick="navigateTo('profile')">👤 My Profile</button>
+                        <button onclick="logout()" style="color: #ef4444; margin-top: 20px;">🚪 Logout</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Make functions globally accessible
+        window.removeToast = removeToast;
+        window.closeDepositModal = closeDepositModal;
+
+        function renderModals() {
+            return `
+                <!-- VIP Levels Modal -->
+                <div id="vipModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal" onclick="closeModal('vipModal')">&times;</span>
+                        <div class="modal-header">
+                            <h2>VIP Levels & Benefits</h2>
+                        </div>
+                        <div class="modal-body">
+                            <p>Our VIP system rewards active users with increasing benefits as you level up. Complete more tasks to advance through the levels and unlock better rewards.</p>
+                            
+                            <div class="vip-level">
+                                <h3>🥉 VIP Level 1</h3>
+                                <ul>
+                                    <li>Basic commission rates</li>
+                                    <li>Access to simple tasks</li>
+                                    <li>Standard withdrawal processing</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="vip-level">
+                                <h3>🥈 VIP Level 2</h3>
+                                <ul>
+                                    <li>5% higher commission rates</li>
+                                    <li>Access to intermediate tasks</li>
+                                    <li>Faster withdrawal processing</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="vip-level">
+                                <h3>🥇 VIP Level 3</h3>
+                                <ul>
+                                    <li>10% higher commission rates</li>
+                                    <li>Access to advanced tasks</li>
+                                    <li>Priority customer support</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="vip-level">
+                                <h3>💎 VIP Level 4+</h3>
+                                <ul>
+                                    <li>15%+ higher commission rates</li>
+                                    <li>Access to premium tasks</li>
+                                    <li>Exclusive bonus opportunities</li>
+                                    <li>Personal account manager</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terms & Conditions Modal -->
+                <div id="termsModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal" onclick="closeModal('termsModal')">&times;</span>
+                        <div class="modal-header">
+                            <h2>Terms & Conditions</h2>
+                        </div>
+                        <div class="modal-body">
+                            <h3>1. Acceptance of Terms</h3>
+                            <p>By accessing and using this platform, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                            
+                            <h3>2. Use License</h3>
+                            <p>Permission is granted to temporarily use this platform for personal, non-commercial transitory viewing only.</p>
+                            
+                            <h3>3. User Account</h3>
+                            <p>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your computer.</p>
+                            
+                            <h3>4. Task Completion</h3>
+                            <p>All tasks must be completed according to the provided instructions. Incomplete or fraudulent submissions may result in account suspension.</p>
+                            
+                            <h3>5. Payments & Withdrawals</h3>
+                            <p>Commission payments are processed according to the schedule outlined in your account. Minimum withdrawal amounts apply.</p>
+                            
+                            <h3>6. Privacy Policy</h3>
+                            <p>Your privacy is important to us. We collect and use personal information as described in our Privacy Policy.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQs Modal -->
+                <div id="faqsModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal" onclick="closeModal('faqsModal')">&times;</span>
+                        <div class="modal-header">
+                            <h2>Frequently Asked Questions</h2>
+                        </div>
+                        <div class="modal-body">
+                            <h3>How do I earn money on this platform?</h3>
+                            <p>You can earn money by completing various tasks such as product reviews, surveys, and promotional activities. Each completed task adds to your balance.</p>
+                            
+                            <h3>When can I withdraw my earnings?</h3>
+                            <p>You can request a withdrawal once you reach the minimum withdrawal amount. Processing times vary based on your VIP level.</p>
+                            
+                            <h3>How do I increase my VIP level?</h3>
+                            <p>Your VIP level increases as you complete more tasks and maintain a high task completion rate. Higher levels unlock better commission rates and benefits.</p>
+                            
+                            <h3>What happens if I skip a task?</h3>
+                            <p>Skipping tasks doesn't penalize you, but it may affect your task completion rate which is considered for VIP level advancement.</p>
+                            
+                            <h3>Is there a limit to how many tasks I can complete?</h3>
+                            <p>There's no strict limit, but some tasks may have daily or weekly caps to ensure fair distribution among all users.</p>
+                            
+                            <h3>How are tasks assigned to me?</h3>
+                            <p>Tasks are assigned based on your VIP level, interests, and previous task performance to provide the most relevant opportunities.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About Modal -->
+                <div id="aboutModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal" onclick="closeModal('aboutModal')">&times;</span>
+                        <div class="modal-header">
+                            <h2>About RankScience</h2>
+                        </div>
+                        <div class="modal-body">
+                            <h3>Our Mission</h3>
+                            <p>RankScience is a growth platform that helps individuals earn income through product reviews and task completion. We connect talented people with opportunities to earn money while providing valuable feedback to businesses.</p>
+                            
+                            <h3>What We Do</h3>
+                            <p>We connect businesses with consumers through authentic engagement. Our platform allows users to earn money by providing valuable feedback on products and services while helping companies improve their offerings.</p>
+                            
+                            <h3>Our Values</h3>
+                            <ul>
+                                <li><strong>Transparency:</strong> We believe in clear communication and honest relationships with both our clients and users.</li>
+                                <li><strong>Innovation:</strong> We continuously evolve our platform to provide the best experience and most valuable insights.</li>
+                                <li><strong>Quality:</strong> We prioritize high-quality interactions and meaningful feedback over quantity.</li>
+                                <li><strong>Community:</strong> We foster a community where both businesses and users can grow together.</li>
+                            </ul>
+                            
+                            <h3>Our Team</h3>
+                            <p>Our team consists of marketing experts, data analysts, and technology professionals dedicated to creating mutually beneficial relationships between businesses and consumers.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            let content = '';
+            
+            if (!state.isLoggedIn) {
+                // Only show landing or login when not logged in
+                if (state.currentView === 'login') {
+                    content = renderLogin();
+                } else {
+                    content = renderLanding();
+                }
+            } else {
+                // Only show protected views when logged in
+                switch (state.currentView) {
+                    case 'dashboard': content = renderDashboard(); break;
+                    case 'tasks': content = renderTasks(); break;
+                    case 'records': content = renderRecords(); break;
+                    case 'profile': content = renderProfile(); break;
+                    case 'withdraw': content = renderWithdraw(); break;
+                    case 'password': content = renderPassword(); break;
+                    case 'payment': content = renderPayment(); break;
+                    default: content = renderDashboard();
+                }
+            }
+            
+            clearCarousels();
+            stopPublicGallery();
+            app.innerHTML = content;
+            
+            // Add deposit modal if needed
+            if (state.isLoggedIn && state.showDepositModal) {
+                const depositModal = renderDepositModal();
+                app.innerHTML += depositModal;
+            }
+            
+            // Init auto-scroll for carousels on Tasks view
+            if (state.isLoggedIn) {
+                if (state.currentView === 'tasks') {
+                    initCarousels();
+                }
+                if (state.currentView === 'dashboard') {
+                    initPublicGallery();
+                }
+            }
+        }
+
+        function renderDepositModal() {
+            if (!state.showDepositModal) return '';
+            const shortfall = state.requiredDeposit || 0;
+            const currentBalance = state.dashboardData?.user?.wallet_balance || 0;
+            const level = state.dashboardData?.user?.level || 1;
+            const commissionRate = state.dashboardData?.commissionRate || 0.05;
+            const depositMode = state.depositMode || 'single';
+            const todayProducts = state.dashboardData?.todayProducts || [];
+            const targetedIds = Array.isArray(state.pendingBulkIds) && state.pendingBulkIds.length > 0 ? state.pendingBulkIds : null;
+            const rawSelection = depositMode === 'bulk'
+                ? (targetedIds
+                    ? todayProducts.filter(p => targetedIds.includes(p.id))
+                    : todayProducts.filter(p => (p.status || '').toString().trim().toLowerCase() !== 'completed'))
+                : todayProducts.filter(p => p.id === state.pendingSubmissionId);
+            const selection = rawSelection.length > 0 ? rawSelection : [];
+            const summary = selection.reduce((acc, product) => {
+                const custom = product.custom_price !== null && product.custom_price !== undefined;
+                const basePrice = custom ? Number(product.custom_price || 0) : Number(product['level' + level + '_price'] || 0);
+                const bonus = Number(product.manual_bonus || 0);
+                acc.totalPrice += basePrice;
+                acc.totalBonus += bonus;
+                acc.totalCommission += basePrice * commissionRate;
+                acc.products.push({
+                    id: product.id,
+                    name: product.name,
+                    basePrice,
+                    bonus
+                });
+                return acc;
+            }, { totalPrice: 0, totalBonus: 0, totalCommission: 0, products: [] });
+            const totalReturn = shortfall + summary.totalPrice + summary.totalBonus + summary.totalCommission;
+            const heading = depositMode === 'bulk' ? 'Pending Tasks Require Deposit' : 'Insufficient Balance';
+            const warningLine = depositMode === 'bulk'
+                ? 'All of today’s pending products will stay in your records as pending until you deposit via customer care and submit them.'
+                : 'This product will remain pending in your records until you deposit via customer care and submit it.';
+            const costLabel = summary.products.length > 1 ? 'Product Costs' : 'Product Cost';
+            const listPreview = summary.products.slice(0, 5);
+            
+            return `
+                <div class="modal" id="depositModal" style="display: block;">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <span class="close-modal" onclick="closeDepositModal()">&times;</span>
+                        <div class="modal-header">
+                            <h2>${heading}</h2>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert warning" style="margin-bottom: 20px;">
+                                <strong>⚠️ Your current balance cannot cover the cost of ${depositMode === 'bulk' ? 'the pending tasks.' : 'this product.'}</strong><br>
+                                <div style="margin-top: 8px;">
+                                    You have a negative balance of <strong style="color: #ef4444;">$${Math.abs(currentBalance).toFixed(2)}</strong>. 
+                                    ${shortfall > 0 ? `You need to deposit at least <strong>$${shortfall.toFixed(2)}</strong> to cover the shortfall.` : 'Please deposit funds to continue.'}
+                                </div>
+                                <div style="margin-top: 12px; font-size: 13px; color: #4b5563;">${warningLine}</div>
+                            </div>
+                            
+                            <div style="background: #f9fafb; padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="color: #6b7280;">Current Balance:</span>
+                                    <span style="font-weight: 600; color: ${currentBalance < 0 ? '#ef4444' : '#1f2937'}">$${currentBalance.toFixed(2)}</span>
+                                </div>
+                                ${shortfall > 0 ? `
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="color: #6b7280;">Required Deposit:</span>
+                                        <span style="font-weight: 600; color: #f59e0b;">$${shortfall.toFixed(2)}</span>
+                                    </div>
+                                ` : ''}
+                                ${summary.totalPrice > 0 ? `
+                                    <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                                        <span style="color: #6b7280;">${costLabel}:</span>
+                                        <span style="font-weight: 600; color: #1f2937;">$${summary.totalPrice.toFixed(2)}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div style="background: #e0f2fe; border: 2px solid #0ea5e9; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                                <div style="font-size: 48px; margin-bottom: 12px;">📱</div>
+                                <h3 style="color: #0c4a6e; margin-bottom: 12px; font-size: 18px;">Contact Customer Care via Telegram</h3>
+                                <p style="color: #075985; margin-bottom: 16px; line-height: 1.6;">
+                                    To deposit funds, please contact our customer care team via Telegram. They will assist you with the deposit process.
+                                </p>
+                                <a href="https://t.me/wunderkind_support" target="_blank" style="display: inline-block; background: #0ea5e9; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <span style="margin-right: 8px;">💬</span> Contact via Telegram
+                                </a>
+                            </div>
+                            
+                            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                                <h4 style="color: #166534; margin-bottom: 12px; font-size: 16px; font-weight: 600;">💰 What You'll Receive After Submission:</h4>
+                                <div style="color: #166534; line-height: 1.8;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                        <span>Deposited Amount:</span>
+                                        <strong>$${shortfall > 0 ? shortfall.toFixed(2) : '0.00'}</strong>
+                                    </div>
+                                    ${summary.totalPrice > 0 ? `
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                            <span>${costLabel} (Refund):</span>
+                                            <strong>$${summary.totalPrice.toFixed(2)}</strong>
+                                        </div>
+                                    ` : ''}
+                                    ${summary.totalBonus > 0 ? `
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                            <span>Bonus Total:</span>
+                                            <strong>$${summary.totalBonus.toFixed(2)}</strong>
+                                        </div>
+                                    ` : ''}
+                                    ${summary.totalCommission > 0 ? `
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                            <span>Commission (${(commissionRate * 100).toFixed(1)}%):</span>
+                                            <strong>$${summary.totalCommission.toFixed(2)}</strong>
+                                        </div>
+                                    ` : ''}
+                                    <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 2px solid #22c55e; font-size: 18px; font-weight: bold;">
+                                        <span>Total You'll Receive:</span>
+                                        <strong style="color: #15803d;">$${totalReturn.toFixed(2)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${summary.products.length > 0 ? `
+                                <div style="background: #f9fafb; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                                    <h4 style="margin-bottom: 12px; color: #1f2937; font-size: 15px;">Pending Product${summary.products.length > 1 ? 's' : ''} Summary</h4>
+                                    <ul style="list-style: none; padding-left: 0; color: #374151; font-size: 14px;">
+                                        ${listPreview.map(item => `
+                                            <li style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                                <span style="max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
+                                                <span>$${item.basePrice.toFixed(2)}${item.bonus > 0 ? ` (+$${item.bonus.toFixed(2)} bonus)` : ''}</span>
+                                            </li>
+                                        `).join('')}
+                                        ${summary.products.length > listPreview.length ? `
+                                            <li style="margin-top: 6px; font-size: 12px; color: #6b7280;">+${summary.products.length - listPreview.length} more pending product(s)...</li>
+                                        ` : ''}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button type="button" class="btn" style="background: #6b7280; flex: 1;" onclick="closeDepositModal()">Close</button>
+                            </div>
+                            
+                            <p style="font-size: 13px; color: #6b7280; margin-top: 16px; line-height: 1.6; text-align: center; background: #f9fafb; padding: 12px; border-radius: 8px;">
+                                <strong>Important:</strong> After customer care processes your deposit, you'll be able to successfully submit ${depositMode === 'bulk' ? 'these products' : 'this product'}. 
+                                All the money you deposited (to cover the shortfall) will be returned to your account along with the product cost, any bonuses, and the commission you earn.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        let carouselIntervals = [];
+        function clearCarousels() {
+            if (carouselIntervals && carouselIntervals.length) {
+                carouselIntervals.forEach(id => clearInterval(id));
+                carouselIntervals = [];
+            }
+        }
+
+        function initCarousels() {
+            clearCarousels();
+            const carousels = document.querySelectorAll('.task-carousel');
+            carousels.forEach(carousel => {
+                const firstCard = carousel.querySelector('.carousel-card');
+                const step = (firstCard ? firstCard.offsetWidth : 280) + 16; // card width + gap
+                let direction = 1;
+                const timer = setInterval(() => {
+                    const atEnd = Math.ceil(carousel.scrollLeft + carousel.clientWidth) >= carousel.scrollWidth;
+                    const atStart = carousel.scrollLeft <= 0;
+                    if (atEnd) direction = -1;
+                    else if (atStart) direction = 1;
+                    carousel.scrollBy({ left: step * direction, behavior: 'smooth' });
+                }, 4000);
+                carouselIntervals.push(timer);
+            });
+        }
+
+        let publicGalleryInterval = null;
+        function stopPublicGallery() {
+            if (publicGalleryInterval) {
+                clearInterval(publicGalleryInterval);
+                publicGalleryInterval = null;
+            }
+        }
+
+        function initPublicGallery() {
+            stopPublicGallery();
+            const host = document.getElementById('publicGalleryCard');
+            if (!host || !state.publicProducts || state.publicProducts.length === 0) return;
+            let index = 0;
+            const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
+            const renderCard = () => {
+                const p = state.publicProducts[index % state.publicProducts.length];
+                const imagePath = p.image_path ? `${baseUploadUrl}/${p.image_path.replace(/^\/+/, '')}` : '';
+                const imageTemplate = imagePath ? `<img src="${imagePath}" alt="${p.name}" style="width:100%; height:180px; object-fit:cover; border-radius:12px;">` : '📦';
+                host.innerHTML = `
+                    <div class="task-card" style="margin-bottom: 16px;">
+                        <div class="task-app" style="align-items: center;">
+                            <div class="task-app-icon" style="width: 120px; height: 120px;">${imageTemplate}</div>
+                            <div style="flex:1;">
+                                <h3 style="font-weight: bold; font-size: 18px; margin-bottom: 6px;">${p.name}</h3>
+                            </div>
+                        </div>
+                    </div>`;
+            };
+            renderCard();
+            publicGalleryInterval = setInterval(() => {
+                index = (index + 1) % state.publicProducts.length;
+                renderCard();
+            }, 3500);
+        }
+
+        // ===== User popups and notifications (polling) =====
+        let popupPollTimer = null;
+        let notificationPollTimer = null;
+        let activePopupId = null;
+
+        async function fetchAndMaybeShowPopup() {
+            if (!state.isLoggedIn) return;
+            try {
+                const popups = await apiRequest('/user/popups', { method: 'GET' });
+                if (Array.isArray(popups) && popups.length > 0) {
+                    const popup = popups[0];
+                    if (popup && popup.id !== activePopupId) {
+                        activePopupId = popup.id;
+                        // Small delay to ensure DOM is ready, especially on login
+                        setTimeout(() => {
+                            showPopupCard(popup);
+                        }, 100);
+                    }
+                }
+            } catch (_) {}
+        }
+
+        async function fetchAndShowNotifications() {
+            if (!state.isLoggedIn) return;
+            try {
+                const notes = await apiRequest('/user/notifications', { method: 'GET' });
+                if (Array.isArray(notes)) {
+                    for (const n of notes) {
+                        showToast('info', n.title || 'Message', n.message || '');
+                        try { await apiRequest('/user/notifications/' + n.id + '/read', { method: 'PATCH' }); } catch (_) {}
+                    }
+                }
+            } catch (_) {}
+        }
+
+        function startUserPolling() {
+            stopUserPolling();
+            // Fetch immediately on start (for immediate display on login)
+            fetchAndMaybeShowPopup();
+            fetchAndShowNotifications();
+            // Then set up polling intervals
+            popupPollTimer = setInterval(fetchAndMaybeShowPopup, 15000);
+            notificationPollTimer = setInterval(fetchAndShowNotifications, 20000);
+        }
+
+        function stopUserPolling() {
+            if (popupPollTimer) clearInterval(popupPollTimer);
+            if (notificationPollTimer) clearInterval(notificationPollTimer);
+            popupPollTimer = null;
+            notificationPollTimer = null;
+        }
+
+        function showPopupCard(popup) {
+            const existing = document.getElementById('popup-card-overlay');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'popup-card-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0,0,0,0.5)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '2000';
+            const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
+            
+            // Check if this is a voucher (has image_path)
+            const isVoucher = !!popup.image_path;
+            
+            // For vouchers, show congratulations with emojis
+            const displayTitle = isVoucher 
+                ? (popup.title && popup.title.includes('🎉') ? popup.title : `🎉 ${popup.title || 'Congratulations!'} 🎉`)
+                : (popup.title || 'Offer');
+            
+            const displayMessage = isVoucher && popup.message
+                ? popup.message
+                : (isVoucher ? '🎊 You have received a special voucher! 🎊' : (popup.message || ''));
+            
+            const imgHtml = popup.image_path ? `
+                <div style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">🎉🎊🎁</div>
+                    <div style="color: white; font-weight: bold; font-size: 20px; margin-bottom: 15px;">Congratulations!</div>
+                    <div style="width: 100%; background: #f9fafb; border-radius: 12px; padding: 10px;">
+                        <img src="${baseUploadUrl}/${popup.image_path.replace(/^\/+/, '')}" alt="voucher" style="display:block; width:100%; height:auto; max-height: 50vh; object-fit: contain; border-radius: 8px;">
+                    </div>
+                </div>` : '';
+            
+            overlay.innerHTML = `
+                <div style="background: white; width: min(92vw, 420px); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); overflow: hidden; animation: popupSlideIn 0.3s ease-out;">
+                    <div style="padding: 18px 20px; background: ${isVoucher ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'var(--primary)'}; color: white; display:flex; justify-content: space-between; align-items:center;">
+                        <div style="font-weight: 700; font-size: ${isVoucher ? '18px' : '16px'};">${displayTitle}</div>
+                        <button id="popup-close-btn" style="background: transparent; border: none; color: white; font-size: 22px; line-height: 1; cursor: pointer;">&times;</button>
+                    </div>
+                    ${imgHtml}
+                    ${displayMessage && !isVoucher ? `
+                    <div style="padding: 18px 20px; color: #1f2937; font-size: 14px;">
+                        ${displayMessage}
+                    </div>` : ''}
+                    ${isVoucher && displayMessage && !displayMessage.includes('🎊') ? `
+                    <div style="padding: 18px 20px; color: #1f2937; font-size: 14px; text-align: center; background: #fef3c7;">
+                        ${displayMessage}
+                    </div>` : ''}
+                    <div style="padding: 0 20px 20px; display:flex; gap: 10px; flex-wrap: wrap;">
+                        <a id="popup-action-btn" href="${popup.url || '#'}" target="${popup.url ? '_blank' : '_self'}" rel="noopener" class="contact-btn" style="display:inline-block; text-align:center; flex: 1; ${isVoucher ? 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);' : ''}">${isVoucher ? '🎁 Claim Voucher' : 'Open'}</a>
+                        <button id="popup-dismiss-btn" class="contact-btn" style="background:#6b7280; flex: 1;">Dismiss</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add animation style if not already added
+            if (!document.getElementById('popup-animation-style')) {
+                const style = document.createElement('style');
+                style.id = 'popup-animation-style';
+                style.textContent = `
+                    @keyframes popupSlideIn {
+                        from {
+                            transform: scale(0.8) translateY(-20px);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: scale(1) translateY(0);
+                            opacity: 1;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(overlay);
+            function closeOverlay() { overlay.remove(); activePopupId = null; }
+            overlay.querySelector('#popup-close-btn').addEventListener('click', closeOverlay);
+            overlay.querySelector('#popup-dismiss-btn').addEventListener('click', closeOverlay);
+            overlay.querySelector('#popup-action-btn').addEventListener('click', async (e) => {
+                e.preventDefault();
+                try { 
+                    await apiRequest('/user/popup/' + popup.id + '/click', { method: 'POST' }); 
+                    console.log('Voucher click recorded successfully');
+                } catch (err) {
+                    console.error('Failed to record voucher click:', err);
+                }
+                closeOverlay();
+            });
+        }
+
+        render();
+    </script>
+</body>
+</html>
