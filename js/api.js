@@ -1,6 +1,7 @@
 // api.js - API Helper Functions
-const API_BASE_URL = 'http://localhost:5000/api';
-
+const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : `${window.location.protocol}//${window.location.host}/api`;
 // Get token from localStorage
 function getToken() {
     return localStorage.getItem('token');
