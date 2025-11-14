@@ -82,12 +82,13 @@ const uploadVoucherMulter = multer({ storage: voucherStorage });
 // Database connection
 // Replace the existing dbConfig with:
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'calvin',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'wunderkind_platform',
+  host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+  port: Number(process.env.MYSQLPORT || process.env.DB_PORT || 3306),
+  user: process.env.MYSQLUSER || process.env.DB_USER || 'calvin',
+  password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
+  database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'wunderkind_platform',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: Number(process.env.DB_CONN_LIMIT || 10),
   queueLimit: 0,
   decimalNumbers: true  // Add this line
 };
@@ -923,44 +924,72 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
 
     try {
-        // Get total users count
-        const [totalUsers] = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = 0');
-        
-        // Get active users (users who completed tasks today)
-        const today = new Date().toISOString().slice(0, 10);
-        const [activeUsers] = await pool.query(
-            'SELECT COUNT(DISTINCT user_id) as count FROM user_products WHERE assigned_date = ? AND status = "completed"',
-            [today]
-        );
+        // Get all stats with simple number values
+        const [
+            totalUsersResult,
+            activeUsersResult, 
+            balanceResult,
+            productsResult,
+            withdrawsResult,
+            commissionResult
+        ] = await Promise.all([
+            // Total non-admin users
+            pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = 0')
+                .then(([rows]) => rows[0].count || 0)
+                .catch(() => 0),
 
-        // Get total wallet balance
-        const [totalBalance] = await pool.query('SELECT SUM(wallet_balance) as total FROM users WHERE is_admin = 0');
+            // Active users today
+            pool.query(`
+                SELECT COUNT(DISTINCT user_id) as count 
+                FROM user_products 
+                WHERE DATE(assigned_date) = CURDATE() 
+                AND status = 'completed'
+            `)
+                .then(([rows]) => rows[0].count || 0)
+                .catch(() => 0),
 
-        // Get total products
-        const [totalProducts] = await pool.query('SELECT COUNT(*) as count FROM products');
+            // Total balance
+            pool.query('SELECT COALESCE(SUM(wallet_balance), 0) as total FROM users WHERE is_admin = 0')
+                .then(([rows]) => Number(rows[0].total) || 0)
+                .catch(() => 0),
 
-        // Get pending withdrawals
-        const [pendingWithdrawals] = await pool.query(
-            'SELECT COUNT(*) as count, SUM(amount) as total FROM withdrawal_requests WHERE status = "pending"'
-        );
+            // Total products
+            pool.query('SELECT COUNT(*) as count FROM products')
+                .then(([rows]) => rows[0].count || 0)
+                .catch(() => 0),
 
-        // Get total commission earned
-        const [totalCommission] = await pool.query('SELECT SUM(commission_earned) as total FROM users WHERE is_admin = 0');
+            // Pending withdraws count
+            pool.query('SELECT COUNT(*) as count FROM withdrawal_requests WHERE status = "pending"')
+                .then(([rows]) => rows[0].count || 0)
+                .catch(() => 0),
 
+            // Total commission
+            pool.query('SELECT COALESCE(SUM(commission_earned), 0) as total FROM users WHERE is_admin = 0')
+                .then(([rows]) => Number(rows[0].total) || 0)
+                .catch(() => 0)
+        ]);
+
+        // Return simple number values
         res.json({
-            totalUsers: totalUsers[0].count || 0,
-            activeUsers: activeUsers[0].count || 0,
-            totalBalance: totalBalance[0].total || 0,
-            totalProducts: totalProducts[0].count || 0,
-            pendingWithdrawals: {
-                count: pendingWithdrawals[0].count || 0,
-                amount: pendingWithdrawals[0].total || 0
-            },
-            totalCommission: totalCommission[0].total || 0
+            totalUsers: totalUsersResult,
+            activeUsers: activeUsersResult,
+            totalBalance: balanceResult,
+            totalProducts: productsResult,
+            pendingWithdraws: withdrawsResult,
+            totalCommission: commissionResult
         });
+
     } catch (err) {
         console.error('Stats error:', err);
-        res.status(500).json({ error: 'Failed to fetch stats' });
+        // Return all zeros on error
+        res.json({
+            totalUsers: 0,
+            activeUsers: 0,
+            totalBalance: 0,
+            totalProducts: 0,
+            pendingWithdraws: 0,
+            totalCommission: 0
+        });
     }
 });
 
@@ -1311,8 +1340,6 @@ app.post('/api/admin/create-admin', authMiddleware, adminMiddleware, async (req,
 });
 
 // Replace or add the stats endpoint:
-
-// Replace the existing stats endpoint with this version:
 
 // Replace the existing /api/admin/stats endpoint with this version:
 
