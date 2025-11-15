@@ -1,10 +1,16 @@
-// api.js - API Helper Functions
-const DEFAULT_API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : `${window.location.protocol}//${window.location.host}/api`;
-const API_BASE_URL = window.RANKSCIENCE_API_BASE_URL 
-    || document.querySelector('meta[name="api-base-url"]')?.content 
-    || DEFAULT_API_BASE_URL;
+// api.js - API Helper Functions with Environment Detection
+
+// Automatically detect the correct API URL based on environment
+// Priority: meta[name="api-base-url"] -> window.RANKSCIENCE_API_BASE_URL -> same-origin /api
+const API_BASE_URL = (() => {
+    const metaTag = document.querySelector('meta[name="api-base-url"]');
+    if (metaTag && metaTag.content) return metaTag.content.replace(/\/$/, '');
+    if (window.RANKSCIENCE_API_BASE_URL) return window.RANKSCIENCE_API_BASE_URL.replace(/\/$/, '');
+    return `${window.location.protocol}//${window.location.host}/api`;
+})();
+
+console.log('API Base URL:', API_BASE_URL);
+
 // Get token from localStorage
 function getToken() {
     return localStorage.getItem('token');

@@ -10,6 +10,15 @@
     <div id="app"></div>
     <script src="js/api.js"></script>
     <script>
+        // Global API base - prefer meta override, then same origin.
+        window.RANKSCIENCE_API_BASE_URL = (function(){
+            const m = document.querySelector('meta[name="api-base-url"]');
+            if (m && m.content) return m.content.replace(/\/$/, '');
+            return `${window.location.protocol}//${window.location.host}`;
+        })();
+
+    </script>
+    <script>
         window.addEventListener('DOMContentLoaded', () => {
             if (!requireAdmin()) return;
             loadInitialData();
@@ -56,7 +65,8 @@
         async function loadVouchers() {
             try {
                 const token = localStorage.getItem('token');
-                const resp = await fetch('http://localhost:5000/api/admin/vouchers', {
+                const API_URL = window.RANKSCIENCE_API_BASE_URL;
+                const resp = await fetch(`${API_URL}/api/admin/vouchers`, {
                     method: 'GET',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
@@ -71,7 +81,8 @@
         async function loadClickedVouchers() {
             try {
                 const token = localStorage.getItem('token');
-                const resp = await fetch('http://localhost:5000/api/admin/voucher-clicks', {
+                const API_URL = window.RANKSCIENCE_API_BASE_URL;
+                const resp = await fetch(`${API_URL}/api/admin/voucher-clicks`, {
                     method: 'GET',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
@@ -109,7 +120,8 @@
             try {
                 const token = localStorage.getItem('token');
                 if (ids.length) {
-                    const resp = await fetch('http://localhost:5000/api/admin/voucher-clicks/mark-read', {
+                    const API_URL = window.RANKSCIENCE_API_BASE_URL;
+                    const resp = await fetch(`${API_URL}/api/admin/voucher-clicks/mark-read`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -442,7 +454,8 @@
             const formData = new FormData(form);
             try {
                 const token = localStorage.getItem('token');
-                const resp = await fetch('http://localhost:5000/api/admin/vouchers', {
+                const API_URL = window.RANKSCIENCE_API_BASE_URL;
+                const resp = await fetch(`${API_URL}/api/admin/vouchers`, {
                     method: 'POST',
                     headers: { 'Authorization': 'Bearer ' + token },
                     body: formData
@@ -472,7 +485,8 @@
             }
             try {
                 const token = localStorage.getItem('token');
-                const resp = await fetch('http://localhost:5000/api/admin/popup', {
+                const API_URL = window.RANKSCIENCE_API_BASE_URL;
+                const resp = await fetch(`${API_URL}/api/admin/popup`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -812,7 +826,7 @@
         }
 
         function renderProducts() {
-            const API_URL = 'http://localhost:5000';
+            const API_URL = window.RANKSCIENCE_API_BASE_URL;
             return `
                 <div class="content-header">
                     <h2>Product Management</h2>
@@ -978,18 +992,14 @@
             `;
         }
 
-        function renderModal() {
+        async function renderModal() {
             if (!adminState.modalOpen) return '';
             const item = adminState.selectedItem;
-            const API_URL = 'http://localhost:5000';
+            const API_URL = window.RANKSCIENCE_API_BASE_URL;
 
             if (adminState.modalType === 'viewUser') {
                 return `
                     <div class="modal-overlay" onclick="closeModal()">
-                        <div class="modal" onclick="event.stopPropagation()">
-                            <div class="modal-header">
-                                <h3>Manage User: ${item.username}</h3>
-                                <p>Complete user management</p>
                             </div>
                             <div class="modal-body">
                                 <div style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
@@ -1356,7 +1366,8 @@
             
             try {
                 const token = localStorage.getItem('token');
-                const resp = await fetch('http://localhost:5000/api/admin/change-password', {
+                const API_URL = window.RANKSCIENCE_API_BASE_URL;
+                const resp = await fetch(`${API_URL}/api/admin/change-password`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1378,7 +1389,7 @@
         }
 
         function renderNotifications() {
-            const API_URL = 'http://localhost:5000';
+            const API_URL = window.RANKSCIENCE_API_BASE_URL;
             return `
                 <div class="content-header">
                     <h2>🔔 Voucher Click Notifications</h2>

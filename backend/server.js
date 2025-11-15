@@ -11,13 +11,41 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS Configuration - Railway Compatible
+const allowedOrigins = [
+  // Prefer explicit FRONTEND_URL from environment
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+// During development allow localhost ports
+if ((process.env.NODE_ENV || 'development') !== 'production') {
+  allowedOrigins.push('http://localhost:3000', 'http://localhost:5000');
+}
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    
+    // Allow Railway domains and configured origins
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('railway.app')) {
+      callback(null, true);
+    } else {
+      console.log('CORS allowed origin:', origin);
+      callback(null, true); // Allow all for now during Railway setup
+    }
+  },
+  credentials: true
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
-// Serve static files from the frontend folder
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
-// Add after app creation (app = express()):
+// Serve static files from the project root (Railway)
+const STATIC_ROOT = path.join(__dirname, '..');
+app.use(express.static(STATIC_ROOT));
+
+// Response normalization middleware
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = function(body) {
@@ -49,6 +77,7 @@ app.use((req, res, next) => {
   };
   next();
 });
+
 // File upload configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -64,6 +93,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
 // Separate storage for vouchers
 const voucherStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -79,8 +109,7 @@ const voucherStorage = multer.diskStorage({
 });
 const uploadVoucherMulter = multer({ storage: voucherStorage });
 
-// Database connection
-// Replace the existing dbConfig with:
+// Database connection - Railway MySQL Configuration
 const dbConfig = {
   host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
   port: Number(process.env.MYSQLPORT || process.env.DB_PORT || 3306),
@@ -90,8 +119,17 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: Number(process.env.DB_CONN_LIMIT || 10),
   queueLimit: 0,
-  decimalNumbers: true  // Add this line
+  decimalNumbers: true
 };
+
+// Log configuration (without password) for debugging
+console.log('Database Config:', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  database: dbConfig.database,
+  password: dbConfig.password ? '***' : 'NOT SET'
+});
 
 // Create a connection pool for reuse
 const pool = mysql.createPool(dbConfig);
@@ -150,7 +188,7 @@ async function ensureSchema() {
       console.error('Schema alter error (custom_price):', err.message);
     }
   }
-  // Vouchers library (image-based cards admin can reuse)
+
   try {
     await pool.query(`CREATE TABLE IF NOT EXISTS vouchers (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -166,7 +204,7 @@ async function ensureSchema() {
   } catch (err) {
     console.error('Schema ensure error (vouchers):', err.message);
   }
-  // Popups sent by admin to a specific user
+
   try {
     await pool.query(`CREATE TABLE IF NOT EXISTS popups (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -186,7 +224,6 @@ async function ensureSchema() {
     console.error('Schema ensure error (popups):', err.message);
   }
 
-  // Notifications sent to users (e.g., admin instructions)
   try {
     await pool.query(`CREATE TABLE IF NOT EXISTS notifications (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -208,7 +245,6 @@ async function ensureSchema() {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Helper: sanitize user object (remove password)
-// Replace the existing sanitizeUser function with:
 function sanitizeUser(user) {
   if (!user) return null;
   const { password, ...rest } = user;
@@ -279,7 +315,7 @@ function adminMiddleware(req, res, next) {
 
 // Basic routes for testing
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'Wunderkind API is working!', timestamp: new Date() });
+  res.json({ message: 'RankScience API is working!', timestamp: new Date() });
 });
 
 app.get('/api/health', async (req, res) => {
@@ -287,11 +323,11 @@ app.get('/api/health', async (req, res) => {
   res.json({
     status: 'OK',
     database: dbStatus ? 'Connected' : 'Disconnected',
+    environment: process.env.NODE_ENV || 'development',
     timestamp: new Date()
   });
 });
 
-// Mock API routes for frontend testing
 // ----------------------
 // Auth routes
 // ----------------------
@@ -316,7 +352,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Replace the existing login endpoint with:
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
@@ -329,17 +364,14 @@ app.post('/api/auth/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // Create token with isAdmin flag
     const token = jwt.sign({ 
       userId: user.id, 
       username: user.username,
       isAdmin: !!user.is_admin 
     }, process.env.JWT_SECRET || 'test-secret');
 
-    // Update last login
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
 
-    // Return sanitized user with proper numeric types
     res.json({
       token,
       user: sanitizeUser(user)
@@ -377,7 +409,6 @@ app.get('/api/user/dashboard', authMiddleware, async (req, res) => {
     const [commissionRows] = await pool.query('SELECT rate FROM commission_rates WHERE level = ? LIMIT 1', [user.level]);
     const commissionRate = commissionRows.length ? commissionRows[0].rate : 0.05;
 
-    // Today's assigned products
     const [todayProductsRows] = await pool.query(
       `SELECT 
          up.id AS assignment_id,
@@ -423,7 +454,7 @@ app.get('/api/user/dashboard', authMiddleware, async (req, res) => {
   }
 });
 
-// User: fetch pending popup(s) for this user (most recent pending)
+// User: fetch pending popup(s)
 app.get('/api/user/popups', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -438,7 +469,7 @@ app.get('/api/user/popups', authMiddleware, async (req, res) => {
   }
 });
 
-// User: click a popup (mark clicked)
+// User: click a popup
 app.post('/api/user/popup/:id/click', authMiddleware, async (req, res) => {
   try {
     const popupId = req.params.id;
@@ -447,13 +478,10 @@ app.post('/api/user/popup/:id/click', authMiddleware, async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Popup not found' });
     if (rows[0].user_id !== userId) return res.status(403).json({ error: 'Not allowed' });
     
-    // Update popup status to clicked
     await pool.query('UPDATE popups SET status = "clicked", clicked_at = NOW() WHERE id = ?', [popupId]);
     
-    // Notify admin that user clicked on voucher (if it has an image_path, it's likely a voucher)
     if (rows[0].image_path && rows[0].image_path.trim() !== '') {
       try {
-        // Get user info for the notification
         const [userRows] = await pool.query('SELECT username, email FROM users WHERE id = ?', [userId]);
         const userInfo = userRows[0] || {};
         const userName = userInfo.username || userInfo.email || `User #${userId}`;
@@ -462,10 +490,7 @@ app.post('/api/user/popup/:id/click', authMiddleware, async (req, res) => {
         console.log(`[ADMIN NOTIFICATION] Voucher image path: ${rows[0].image_path}`);
       } catch (notifyErr) {
         console.error('Failed to notify admin:', notifyErr);
-        // Don't fail the request if notification fails
       }
-    } else {
-      console.log(`[Popup Click] User ${userId} clicked popup ${popupId} (not a voucher - no image_path)`);
     }
     
     res.json({ success: true, isVoucher: !!(rows[0].image_path && rows[0].image_path.trim() !== '') });
@@ -505,7 +530,8 @@ app.patch('/api/user/notifications/:id/read', authMiddleware, async (req, res) =
     res.status(500).json({ error: 'Failed to update notification' });
   }
 });
-// Batch submit all today's pending tasks and credit back total + commission
+
+// Batch submit all today's pending tasks
 app.post('/api/user/submit-today', authMiddleware, async (req, res) => {
   const userId = req.user.userId;
   const conn = await pool.getConnection();
@@ -542,7 +568,6 @@ app.post('/api/user/submit-today', authMiddleware, async (req, res) => {
 
     for (let i = 0; i < rows.length; i++) {
       const upId = rows[i].id;
-      // Use custom_price if set, otherwise use level-based price
       const rowPrice = rows[i].custom_price !== null && rows[i].custom_price !== undefined
         ? Number(rows[i].custom_price || 0)
         : Number(rows[i][priceColumn] || 0);
@@ -597,14 +622,10 @@ app.post('/api/user/submit-product/:id', authMiddleware, async (req, res) => {
     const userLevel = userRows[0]?.level || 1;
     const currentBalance = Number(userRows[0]?.wallet_balance || 0);
     
-    // Use custom_price if set, otherwise use level-based price
     const price = row.custom_price !== null && row.custom_price !== undefined 
       ? Number(row.custom_price || 0)
       : Number(row['level' + userLevel + '_price'] || row.level1_price || 0);
 
-    // STRICT CHECK: User cannot submit if balance is negative
-    // This means the product cost exceeded their account balance when assigned
-    // They must deposit funds via customer care to cover the shortfall before submitting
     if (currentBalance < 0) {
       await conn.rollback();
       const shortfall = Math.abs(currentBalance);
@@ -626,8 +647,6 @@ app.post('/api/user/submit-product/:id', authMiddleware, async (req, res) => {
 
     await conn.query('UPDATE user_products SET status = ?, amount_earned = ?, commission_earned = ?, submitted_at = NOW() WHERE id = ?', ['completed', baseAmount, commission, assignmentId]);
 
-    // Add back the product cost + commission (refund + commission)
-    // Also add any deposited amount that was in the account
     await conn.query('UPDATE users SET wallet_balance = wallet_balance + ?, commission_earned = commission_earned + ?, tasks_completed_at_level = tasks_completed_at_level + 1, total_tasks_completed = total_tasks_completed + 1 WHERE id = ?', [earned, commission, userId]);
 
     await conn.commit();
@@ -677,7 +696,6 @@ app.get('/api/user/history', authMiddleware, async (req, res) => {
   }
 });
 
-// Public list of active products for gallery (user-visible)
 app.get('/api/user/products-public', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -756,7 +774,7 @@ app.post('/api/user/deposit', authMiddleware, async (req, res) => {
     
     const depositAmount = Number(amount);
     await pool.query('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?', [depositAmount, userId]);
-    await pool.query('INSERT INTO balance_events (user_id, type, amount, reference_date, details) VALUES (?, "deposit", ?, CURDATE(), ?)', [userId, depositAmount, `Deposit of $${depositAmount.toFixed(2)}`]);
+    await pool.query('INSERT INTO balance_events (user_id, type, amount, reference_date, details) VALUES (?, "deposit", ?, CURDATE(), ?)', [userId, depositAmount, `Deposit of ${depositAmount.toFixed(2)}`]);
     
     const [userRows] = await pool.query('SELECT wallet_balance FROM users WHERE id = ? LIMIT 1', [userId]);
     res.json({ success: true, newBalance: userRows[0].wallet_balance });
@@ -849,7 +867,6 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
   }
 });
 
-// Admin: send a popup to a specific user
 app.post('/api/admin/popup', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { userId, title, message, url, voucherId } = req.body || {};
@@ -866,16 +883,13 @@ app.post('/api/admin/popup', authMiddleware, adminMiddleware, async (req, res) =
       if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
       imagePath = voucher.image_path;
       if (!finalTitle) finalTitle = voucher.title || voucher.name || 'Congratulations! 🎉';
-      // Make message optional - if not provided, use a default congratulations message for vouchers
       if (!finalMessage) {
         finalMessage = voucher.description || '🎊 Congratulations! You have received a special voucher! 🎊';
       }
     }
-    // Only require title, message can be empty (will use default for vouchers)
     if (!finalTitle) {
       return res.status(400).json({ error: 'Title is required (either pass directly or via voucher)' });
     }
-    // If it's a voucher and no message was provided, use congratulations message
     if (isVoucher && !message && !finalMessage) {
       finalMessage = '🎊 Congratulations! You have received a special voucher! 🎊';
     }
@@ -890,7 +904,6 @@ app.post('/api/admin/popup', authMiddleware, adminMiddleware, async (req, res) =
   }
 });
 
-// Admin: send a notification (instructions) to a user
 app.post('/api/admin/notify', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { userId, title, message } = req.body || {};
@@ -907,6 +920,7 @@ app.post('/api/admin/notify', authMiddleware, adminMiddleware, async (req, res) 
     res.status(500).json({ error: 'Failed to create notification' });
   }
 });
+
 app.get('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [req.params.id]);
@@ -917,14 +931,9 @@ app.get('/api/admin/users/:id', authMiddleware, adminMiddleware, async (req, res
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
-// Add this new endpoint after other admin routes:
 
-// Admin: Get dashboard stats
-app.get('/api/admin/stats', authMiddleware, async (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
-
+app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        // Get all stats with simple number values
         const [
             totalUsersResult,
             activeUsersResult, 
@@ -933,12 +942,9 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
             withdrawsResult,
             commissionResult
         ] = await Promise.all([
-            // Total non-admin users
             pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = 0')
                 .then(([rows]) => rows[0].count || 0)
                 .catch(() => 0),
-
-            // Active users today
             pool.query(`
                 SELECT COUNT(DISTINCT user_id) as count 
                 FROM user_products 
@@ -947,47 +953,37 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
             `)
                 .then(([rows]) => rows[0].count || 0)
                 .catch(() => 0),
-
-            // Total balance
             pool.query('SELECT COALESCE(SUM(wallet_balance), 0) as total FROM users WHERE is_admin = 0')
                 .then(([rows]) => Number(rows[0].total) || 0)
                 .catch(() => 0),
-
-            // Total products
             pool.query('SELECT COUNT(*) as count FROM products')
                 .then(([rows]) => rows[0].count || 0)
                 .catch(() => 0),
-
-            // Pending withdraws count
-            pool.query('SELECT COUNT(*) as count FROM withdrawal_requests WHERE status = "pending"')
+            pool.query('SELECT COUNT(*) as count FROM withdrawals WHERE status = "pending"')
                 .then(([rows]) => rows[0].count || 0)
                 .catch(() => 0),
-
-            // Total commission
             pool.query('SELECT COALESCE(SUM(commission_earned), 0) as total FROM users WHERE is_admin = 0')
                 .then(([rows]) => Number(rows[0].total) || 0)
                 .catch(() => 0)
         ]);
 
-        // Return simple number values
         res.json({
             totalUsers: totalUsersResult,
             activeUsers: activeUsersResult,
             totalBalance: balanceResult,
             totalProducts: productsResult,
-            pendingWithdraws: withdrawsResult,
+            pendingWithdrawals: withdrawsResult,
             totalCommission: commissionResult
         });
 
     } catch (err) {
         console.error('Stats error:', err);
-        // Return all zeros on error
         res.json({
             totalUsers: 0,
             activeUsers: 0,
             totalBalance: 0,
             totalProducts: 0,
-            pendingWithdraws: 0,
+            pendingWithdrawals: 0,
             totalCommission: 0
         });
     }
@@ -1037,7 +1033,6 @@ app.put('/api/admin/users/:id/status', authMiddleware, adminMiddleware, async (r
   }
 });
 
-// Admin: change own password
 app.post('/api/admin/change-password', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -1050,7 +1045,6 @@ app.post('/api/admin/change-password', authMiddleware, adminMiddleware, async (r
     
     const userId = req.user.userId;
     const [rows] = await pool.query('SELECT password FROM users WHERE id = ? LIMIT 1', [userId]);
-    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
     
     const user = rows[0];
     const isValid = await bcrypt.compare(currentPassword, user.password);
@@ -1079,7 +1073,6 @@ app.post('/api/admin/users/:id/reset-password', authMiddleware, adminMiddleware,
   }
 });
 
-// Products
 app.get('/api/admin/products', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM products ORDER BY id DESC');
@@ -1090,7 +1083,6 @@ app.get('/api/admin/products', authMiddleware, adminMiddleware, async (req, res)
   }
 });
 
-// Vouchers
 app.get('/api/admin/vouchers', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM vouchers ORDER BY id DESC');
@@ -1101,7 +1093,6 @@ app.get('/api/admin/vouchers', authMiddleware, adminMiddleware, async (req, res)
   }
 });
 
-// Admin: get clicked vouchers (popups with image_path that were clicked)
 app.get('/api/admin/voucher-clicks', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -1146,6 +1137,7 @@ app.post('/api/admin/vouchers', authMiddleware, adminMiddleware, uploadVoucherMu
     res.status(500).json({ error: 'Failed to upload voucher: ' + (err && err.message ? err.message : 'unknown error') });
   }
 });
+
 app.post('/api/admin/products', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { name } = req.body;
@@ -1212,7 +1204,6 @@ app.put('/api/admin/products/:id/status', authMiddleware, adminMiddleware, async
   }
 });
 
-// Withdrawals (admin)
 app.get('/api/admin/withdrawals', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM withdrawals ORDER BY request_date DESC');
@@ -1229,7 +1220,6 @@ app.put('/api/admin/withdrawals/:id/approve', authMiddleware, adminMiddleware, a
     const [rows] = await pool.query('SELECT * FROM withdrawals WHERE id = ? LIMIT 1', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
     const w = rows[0];
-    // Deduct from user's balance
     await pool.query('UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?', [w.amount, w.user_id]);
     await pool.query('UPDATE withdrawals SET status = ?, processed_date = NOW() WHERE id = ?', ['approved', id]);
     res.json({ success: true });
@@ -1251,7 +1241,6 @@ app.put('/api/admin/withdrawals/:id/reject', authMiddleware, adminMiddleware, as
   }
 });
 
-// Commission rates
 app.get('/api/admin/commission-rates', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM commission_rates ORDER BY level');
@@ -1275,7 +1264,6 @@ app.put('/api/admin/commission-rates', authMiddleware, adminMiddleware, async (r
   }
 });
 
-// Level settings
 app.get('/api/admin/level-settings', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM level_settings ORDER BY level');
@@ -1286,7 +1274,6 @@ app.get('/api/admin/level-settings', authMiddleware, adminMiddleware, async (req
   }
 });
 
-// Admin: users with negative balances
 app.get('/api/admin/negative-balances', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT id, username, wallet_balance FROM users WHERE wallet_balance < 0 ORDER BY wallet_balance ASC LIMIT 500');
@@ -1297,7 +1284,6 @@ app.get('/api/admin/negative-balances', authMiddleware, adminMiddleware, async (
   }
 });
 
-// Admin: balance events (optional by user)
 app.get('/api/admin/balance-events', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = req.query.userId;
@@ -1339,84 +1325,6 @@ app.post('/api/admin/create-admin', authMiddleware, adminMiddleware, async (req,
   }
 });
 
-// Replace or add the stats endpoint:
-
-// Replace the existing /api/admin/stats endpoint with this version:
-
-app.get('/api/admin/stats', authMiddleware, async (req, res) => {
-    if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
-
-    try {
-        // Get all stats with simple number values
-        const [
-            totalUsersResult,
-            activeUsersResult, 
-            balanceResult,
-            productsResult,
-            withdrawsResult,
-            commissionResult
-        ] = await Promise.all([
-            // Total non-admin users
-            pool.query('SELECT COUNT(*) as count FROM users WHERE is_admin = 0')
-                .then(([rows]) => rows[0].count || 0)
-                .catch(() => 0),
-
-            // Active users today
-            pool.query(`
-                SELECT COUNT(DISTINCT user_id) as count 
-                FROM user_products 
-                WHERE DATE(assigned_date) = CURDATE() 
-                AND status = 'completed'
-            `)
-                .then(([rows]) => rows[0].count || 0)
-                .catch(() => 0),
-
-            // Total balance
-            pool.query('SELECT COALESCE(SUM(wallet_balance), 0) as total FROM users WHERE is_admin = 0')
-                .then(([rows]) => Number(rows[0].total) || 0)
-                .catch(() => 0),
-
-            // Total products
-            pool.query('SELECT COUNT(*) as count FROM products')
-                .then(([rows]) => rows[0].count || 0)
-                .catch(() => 0),
-
-            // Pending withdraws count
-            pool.query('SELECT COUNT(*) as count FROM withdrawal_requests WHERE status = "pending"')
-                .then(([rows]) => rows[0].count || 0)
-                .catch(() => 0),
-
-            // Total commission
-            pool.query('SELECT COALESCE(SUM(commission_earned), 0) as total FROM users WHERE is_admin = 0')
-                .then(([rows]) => Number(rows[0].total) || 0)
-                .catch(() => 0)
-        ]);
-
-        // Return simple number values
-        res.json({
-            totalUsers: totalUsersResult,
-            activeUsers: activeUsersResult,
-            totalBalance: balanceResult,
-            totalProducts: productsResult,
-            pendingWithdraws: withdrawsResult,
-            totalCommission: commissionResult
-        });
-
-    } catch (err) {
-        console.error('Stats error:', err);
-        // Return all zeros on error
-        res.json({
-            totalUsers: 0,
-            activeUsers: 0,
-            totalBalance: 0,
-            totalProducts: 0,
-            pendingWithdraws: 0,
-            totalCommission: 0
-        });
-    }
-});
-
-// Trigger manual assignment: assign products to users for today
 app.post('/api/admin/trigger-assignment', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await assignProductsToAllUsers();
@@ -1457,7 +1365,6 @@ app.post('/api/admin/assign-product-to-user', authMiddleware, adminMiddleware, a
     const [[productRow]] = await pool.query('SELECT * FROM products WHERE id = ? LIMIT 1', [productId]);
     if (!productRow || productRow.status !== 'active') return res.status(404).json({ error: 'Product not available' });
 
-    // Use custom price if provided, otherwise use level-based price
     let price;
     let priceToUse = null;
     if (customPrice !== undefined && customPrice !== null && customPrice !== '') {
@@ -1542,13 +1449,19 @@ async function ensureDefaultAdmin() {
 
 // Start server
 app.listen(PORT, async () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 API Health check: http://localhost:${PORT}/api/health`);
-  console.log(`👤 User interface: http://localhost:${PORT}/`);
-  console.log(`🔧 Admin interface: http://localhost:${PORT}/admin.html`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 API Health check: /api/health (port ${PORT})`);
+  console.log(`👤 User interface: /`);
+  console.log(`🔧 Admin interface: /admin.html`);
   
   // Test database connection
-  await testConnection();
-  await ensureSchema();
-  await ensureDefaultAdmin();
+  const dbConnected = await testConnection();
+  if (dbConnected) {
+    await ensureSchema();
+    await ensureDefaultAdmin();
+  } else {
+    console.error('⚠️  Server started but database is not connected!');
+    console.error('⚠️  Check your database configuration and restart the server.');
+  }
 });

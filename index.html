@@ -834,8 +834,16 @@
     <div id="app"></div>
 
     <script>
-        // API Helper Functions
-        const API_BASE_URL = 'http://localhost:5000/api';
+        // API base detection (no hardcoded host/port)
+        // Priority order: <meta name="api-base-url"> -> window.RANKSCIENCE_API_BASE_URL -> same origin /api
+        const API_BASE_URL = (() => {
+            const metaTag = document.querySelector('meta[name="api-base-url"]');
+            if (metaTag && metaTag.content) return metaTag.content;
+            if (window.RANKSCIENCE_API_BASE_URL) return window.RANKSCIENCE_API_BASE_URL;
+            return `${window.location.protocol}//${window.location.host}/api`;
+        })();
+
+        console.log('🔗 API URL:', API_BASE_URL);
 
         // Get token from localStorage
         function getToken() {
@@ -1778,19 +1786,15 @@
                                 </div>
                                 ${anyPending ? (walletBalance >= 0
                                     ? `<button class="btn" style="width:100%; margin: 8px 0 16px 0;" onclick="submitAllToday()">Submit All Today's Tasks</button>`
-                                    : `<button class="btn" style="width:100%; margin: 8px 0 8px 0; background: #9ca3af; cursor: not-allowed; opacity: 0.6;" disabled>Submit All (Deposit Required)</button>
-                                       <button class="btn" style="width:100%; margin: 0 0 16px 0; background: #f59e0b;" onclick="showBulkDepositModal()">Deposit to Unlock Submissions</button>`) : ''}
-                                <div class="task-carousel">
-                                    ${(() => {
-                                        const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
-                                        return todayProducts.map(product => {
-                                            // Use custom_price if set, otherwise use level-based price
-                                            const price = product.custom_price !== null && product.custom_price !== undefined
-                                                ? Number(product.custom_price || 0)
-                                                : Number(product['level' + user.level + '_price'] || 0);
+                                    : `<button class="btn" style="width:100%; margin: 8px 0 16px 0; background: #f59e0b;" onclick="showDepositModal(null, ${balanceShortfall}, { mode: 'bulk', pendingIds: ${JSON.stringify(todayProducts.filter(p => (p.status || '').toString().trim().toLowerCase() !== 'completed').map(p => p.id))} })">Deposit to Submit All</button>`) : ''}
+                                <div class="carousel-wrapper">
+                                    <div class="carousel-track">
+                                        ${todayProducts.map(product => {
+                                            const baseUploadUrl = API_BASE_URL.replace(/\/api$/, '');
+                                            const price = Number(product.custom_price || product[`level${user.level}_price`] || 0);
                                             const manualBonus = Number(product.manual_bonus || 0);
-                                            const baseAmount = Number((price + manualBonus).toFixed(2));
-                                            const commission = Number((price * commissionRate).toFixed(2));
+                                            const baseAmount = price + manualBonus;
+                                            const commission = Number((baseAmount * commissionRate).toFixed(2));
                                             const total = Number((baseAmount + commission).toFixed(2));
                                             const status = (product.status || '').toString().trim().toLowerCase();
                                             const badgeClass = status === 'completed' ? 'completed' : 'pending';
@@ -1839,8 +1843,8 @@
                                                     </div>
                                                 </div>
                                             `;
-                                        }).join('');
-                                    })()}
+                                        }).join('')}
+                                    </div>
                                 </div>
                             `}
                         </div>
